@@ -10,3 +10,4 @@ backup_current/
 .idea/
 .vscode/
 .DS_Store
+disaster_notifications.json
