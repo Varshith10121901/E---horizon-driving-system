@@ -1,0 +1,41 @@
+[
+  {
+    "id": 1,
+    "place": "Wayanad",
+    "district": "Wayanad",
+    "state": "Kerala",
+    "disaster_tags": "Extreme rainfall, floods, landslides, dual flood–drought",
+    "headline": "Landslide buries homes in Chooralmala, Wayanad; rescue ops underway",
+    "summary": "Heavy monsoon rain triggered a major landslide in Kerala.",
+    "source_url": "https://example.com/news/1",
+    "source_feed": "mock",
+    "published_at": "2026-07-05T13:56:54.004Z",
+    "detected_at": "2026-07-05T13:56:54.006Z"
+  },
+  {
+    "id": 2,
+    "place": "Puri",
+    "district": "Puri",
+    "state": "Odisha",
+    "disaster_tags": "Cyclones, storm surge, floods, drought",
+    "headline": "Cyclone makes landfall near Puri, Odisha coast evacuated",
+    "summary": "IMD issued red alert for Puri and Balasore districts.",
+    "source_url": "https://example.com/news/2",
+    "source_feed": "mock",
+    "published_at": "2026-07-05T13:56:54.005Z",
+    "detected_at": "2026-07-05T13:56:54.007Z"
+  },
+  {
+    "id": 3,
+    "place": "Balasore",
+    "district": "Balasore",
+    "state": "Odisha",
+    "disaster_tags": "Cyclones, storm surge, floods, drought",
+    "headline": "Cyclone makes landfall near Puri, Odisha coast evacuated",
+    "summary": "IMD issued red alert for Puri and Balasore districts.",
+    "source_url": "https://example.com/news/2",
+    "source_feed": "mock",
+    "published_at": "2026-07-05T13:56:54.005Z",
+    "detected_at": "2026-07-05T13:56:54.007Z"
+  }
+]

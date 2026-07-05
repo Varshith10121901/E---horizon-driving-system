@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.log
+*-screenshot.png
+.edge-profile/
+.chrome-profile/
+chrome-profile/
+Env/
+backup_current/
+.idea/
+.vscode/
+.DS_Store
