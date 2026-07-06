@@ -1282,7 +1282,68 @@ function flyToEvent(lon, lat) {
 // ═══════════════════════════════════════════════════════════
 let gpsInterval = null;
 
+async function geolocateByIP() {
+  try {
+    const res = await fetch("https://ipapi.co/json/");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.city) {
+        userPosition = {
+          lat: data.latitude,
+          lng: data.longitude
+        };
+        gpsCityName = data.city;
+        if (data.region) {
+          gpsCityName += `, ${data.region}`;
+        }
+        if (currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
+          ui.fromInput.value = gpsCityName;
+          map.flyTo({
+            center: [userPosition.lng, userPosition.lat],
+            zoom: 9
+          });
+        }
+        console.log(`[IP Geolocation] Detected city: ${gpsCityName} (${userPosition.lat}, ${userPosition.lng})`);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn("[IP Geolocation (ipapi.co) failed]", e.message);
+  }
+
+  // Fallback to freeipapi.com
+  try {
+    const res = await fetch("https://freeipapi.com/api/json");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.cityName) {
+        userPosition = {
+          lat: data.latitude,
+          lng: data.longitude
+        };
+        gpsCityName = data.cityName;
+        if (data.regionName) {
+          gpsCityName += `, ${data.regionName}`;
+        }
+        if (currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
+          ui.fromInput.value = gpsCityName;
+          map.flyTo({
+            center: [userPosition.lng, userPosition.lat],
+            zoom: 9
+          });
+        }
+        console.log(`[IP Geolocation Fallback] Detected city: ${gpsCityName} (${userPosition.lat}, ${userPosition.lng})`);
+      }
+    }
+  } catch (e) {
+    console.warn("[IP Geolocation (freeipapi.com) failed]", e.message);
+  }
+}
+
 function initGPS() {
+  // Geolocate user via IP immediately on startup
+  geolocateByIP();
+
   if (!navigator.geolocation) {
     ui.gpsStatus.querySelector(".status-text").textContent = "GPS N/A";
     ui.fromInput.placeholder = "Enter origin...";

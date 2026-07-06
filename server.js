@@ -1127,99 +1127,79 @@ function getFallbackNews(from = "", to = "") {
   ];
 }
 
-const NEWS_API_KEY = process.env.NEWS_API_KEY || "";
 let newsFetchInProgress = false;
+const NEWS_CACHE_TTL = 60000; // 60 seconds global cache
 
-// Build a dynamic news search query based on the vehicle's current route segment
-function buildNewsQuery(currentPlace, nextPlace) {
-  // Core route places that are always relevant
-  const corePlaces = [];
-  if (plan.from) corePlaces.push(plan.from);
-  if (plan.to) corePlaces.push(plan.to);
-  
-  // Add the vehicle's active segment places for location-aware results
-  const dynamicPlaces = new Set(corePlaces);
-  if (currentPlace) dynamicPlaces.add(currentPlace);
-  if (nextPlace) dynamicPlaces.add(nextPlace);
-  
-  // Build an OR-joined query with road hazard keywords
-  const placeQuery = Array.from(dynamicPlaces).join(" OR ");
-  return `(${placeQuery}) AND (earthquake OR landslide OR flood OR cyclone OR tsunami OR wildfire OR tornado OR hurricane OR "heavy rain" OR disaster)`;
-}
-
-// NewsAPI.org fetcher — pulls real-time news based on vehicle position
+// SauravKanchan NewsAPI integration (Free alternative fetching Indian Top Headlines)
 async function fetchNewsAPI(currentPlace, nextPlace) {
-  // Create a cache key that includes the active segment so news rotates as vehicle moves
-  const cacheKey = `${(currentPlace || "").toLowerCase()}_${(nextPlace || "").toLowerCase()}`;
   const now = Date.now();
   
-  // Use cached results if within 5-second window AND same segment
-  if (newsCache && (now - lastNewsFetch < 5000) && newsCache._cacheKey === cacheKey) {
-    return newsCache.articles;
+  // Return cached headlines if within TTL
+  if (newsCache && (now - lastNewsFetch < NEWS_CACHE_TTL)) {
+    return newsCache;
   }
   
   if (newsFetchInProgress) {
-    return (newsCache && newsCache.articles) || getFallbackNews(currentPlace, nextPlace);
+    return newsCache || getFallbackNews(currentPlace, nextPlace);
   }
 
   newsFetchInProgress = true;
   try {
-    const query = buildNewsQuery(currentPlace, nextPlace);
-    
-    // NewsAPI.org /v2/everything endpoint with popularity sorting
-    const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    const params = new URLSearchParams({
-      q: query,
-      sortBy: "publishedAt",
-      language: "en",
-      pageSize: "10",
-      from: fiveDaysAgo,
-      apiKey: NEWS_API_KEY
+    console.log("[News Service] Fetching Indian headlines from SauravTech NewsAPI...");
+    const categories = ["general", "business", "technology", "science"];
+    const fetchPromises = categories.map(async (cat) => {
+      const url = `https://saurav.tech/NewsAPI/top-headlines/category/${cat}/in.json`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          return data.articles || [];
+        }
+        return [];
+      } catch (e) {
+        clearTimeout(timeoutId);
+        console.warn(`[News Service] Failed to fetch category ${cat}:`, e.message);
+        return [];
+      }
     });
-    
-    const url = `https://newsapi.org/v2/everything?${params.toString()}`;
-    console.log(`[API Request] NewsAPI query: "${query}" via URL: ${url}`);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-    
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    console.log(`[API Response] NewsAPI status: ${res.status} ${res.statusText}`);
-    
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      throw new Error(`NewsAPI HTTP ${res.status}: ${errBody.slice(0, 200)}`);
-    }
-    
-    const data = await res.json();
-    
-    if (data.status !== "ok" || !data.articles) {
-      throw new Error(data.message || "NewsAPI returned non-ok status");
-    }
-    
-    // Normalize articles into our standard format
-    const articles = data.articles.slice(0, 10).map(article => ({
-      title: article.title || "Untitled",
-      link: article.url || "https://newsapi.org",
-      pubDate: article.publishedAt || new Date().toUTCString(),
-      description: article.description || article.content || "",
-      source: article.source?.name || "NewsAPI"
-    }));
 
-    newsCache = { articles, _cacheKey: cacheKey };
+    const results = await Promise.all(fetchPromises);
+    let allArticles = [];
+    results.forEach(articles => {
+      allArticles = allArticles.concat(articles);
+    });
+
+    // Deduplicate by URL
+    const seenUrls = new Set();
+    const uniqueArticles = [];
+    allArticles.forEach(article => {
+      if (article && article.url && !seenUrls.has(article.url)) {
+        seenUrls.add(article.url);
+        uniqueArticles.push({
+          title: article.title || "Untitled",
+          link: article.url || "https://newsapi.org",
+          pubDate: article.publishedAt || new Date().toUTCString(),
+          description: article.description || article.content || "",
+          source: article.source?.name || "NewsAPI"
+        });
+      }
+    });
+
+    newsCache = uniqueArticles;
     lastNewsFetch = now;
-    
-    console.log(`[NewsAPI] Fetched ${articles.length} articles for segment: ${currentPlace} → ${nextPlace}`);
+    console.log(`[News Service] Successfully loaded and deduplicated ${newsCache.length} articles.`);
   } catch (error) {
-    console.warn("[NewsAPI] Failed to fetch live news, using fallback/cache:", error.message);
-    if (!newsCache || !newsCache.articles) {
-      newsCache = { articles: getFallbackNews(currentPlace, nextPlace), _cacheKey: cacheKey };
+    console.warn("[News Service] Failed to fetch SauravTech headlines, using fallback/cache:", error.message);
+    if (!newsCache) {
+      newsCache = getFallbackNews(currentPlace, nextPlace);
     }
   } finally {
     newsFetchInProgress = false;
   }
-  return newsCache.articles;
+  return newsCache;
 }
 
 // SerpApi Google Hotels search integration
@@ -1725,7 +1705,10 @@ async function buildTripStateAsync(searchParams) {
     const titleL = (item.title || "").toLowerCase();
     const descL = (item.description || "").toLowerCase();
     
-    const hasPlace = placesToCheck.some(p => titleL.includes(p) || descL.includes(p));
+    const hasPlace = placesToCheck.some(p => {
+      const regex = new RegExp(`\\b${p.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\b`, 'i');
+      return regex.test(titleL) || regex.test(descL);
+    });
     const isNaturalDisaster = naturalDisasterKeywords.some(w => titleL.includes(w) || descL.includes(w));
     
     // Check if the news is very recent (published within the last 72 hours)
