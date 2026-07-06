@@ -684,7 +684,34 @@ async function verifyPlaceWithDDG(name) {
   }
 }
 
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const geocodeCache = {};
+
 async function geocodePlace(query) {
+  const cleanQuery = query.toLowerCase().trim();
+  if (geocodeCache[cleanQuery]) {
+    console.log(`[Geocode Cache] Serving cached coordinates for "${query}":`, geocodeCache[cleanQuery]);
+    if (geocodeCache[cleanQuery].failed) {
+      throw new Error(geocodeCache[cleanQuery].error);
+    }
+    return geocodeCache[cleanQuery];
+  }
+
+  try {
+    const result = await geocodePlaceRaw(query);
+    geocodeCache[cleanQuery] = result;
+    return result;
+  } catch (err) {
+    if (err.message && err.message.includes("Too many requests")) {
+      // Do not cache rate limit failures permanently so we can retry, but throw directly
+      throw err;
+    }
+    geocodeCache[cleanQuery] = { failed: true, error: err.message };
+    throw err;
+  }
+}
+
+async function geocodePlaceRaw(query) {
   const coordMatch = query.match(/^([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)$/);
   if (coordMatch) {
     const lat = parseFloat(coordMatch[1]);
@@ -1618,16 +1645,24 @@ async function reverseGeocode(lat, lon) {
   if (reverseGeoCache[cacheKey]) {
     return reverseGeoCache[cacheKey];
   }
+  
+  // Throttle sequential reverse-geocoding calls to respect Nominatim's 1 req/sec limit
+  await delay(1100);
+
   const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latFixed}&lon=${lonFixed}&zoom=14&countrycodes=in`;
   console.log(`[API Request] Nominatim Reverse Geocode: [${lonFixed}, ${latFixed}] via URL: ${url}`);
   try {
     const res = await fetch(url, { headers });
     console.log(`[API Response] Nominatim Reverse Geocode status: ${res.status} ${res.statusText}`);
+    
+    if (res.status === 429) {
+      throw new Error("Rate limited (429)");
+    }
+    
     if (!res.ok) throw new Error("Reverse geocode failed");
     const data = await res.json();
     const address = data.address || {};
     
-    // Parse Taluk and local place name
     const taluk = address.subdistrict || address.county || "";
     const place = address.suburb || address.neighbourhood || address.village || address.town || address.road || address.city || "";
     
@@ -1643,6 +1678,33 @@ async function reverseGeocode(lat, lon) {
     return placeName;
   } catch (err) {
     console.warn(`[Reverse Geocode Failed] ${lat}, ${lon}:`, err.message);
+    
+    // Proximity fallback using local India Hotels DB to bypass rate limits gracefully
+    let closestCity = "Route Checkpoint";
+    let minDistance = Infinity;
+    if (indiaHotels && indiaHotels.length > 0) {
+      for (const h of indiaHotels) {
+        if (h.Latitude && h.Longitude) {
+          const hLat = parseFloat(h.Latitude);
+          const hLon = parseFloat(h.Longitude);
+          if (!isNaN(hLat) && !isNaN(hLon)) {
+            const dist = getDistanceKm(parseFloat(lat), parseFloat(lon), hLat, hLon);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestCity = h.City || closestCity;
+            }
+          }
+        }
+      }
+    }
+    
+    if (minDistance < 60 && closestCity !== "Route Checkpoint") {
+      const fallbackName = `${closestCity} Area`;
+      console.log(`[Reverse Geocode Fallback] Resolved GPS [${lonFixed}, ${latFixed}] using India Hotels DB proximity to: "${fallbackName}" (Distance: ${minDistance.toFixed(1)} km)`);
+      reverseGeoCache[cacheKey] = fallbackName;
+      return fallbackName;
+    }
+    
     return null;
   }
 }
@@ -2568,6 +2630,21 @@ const server = http.createServer(async (request, response) => {
       } else {
         sendJson(response, 404, { ok: false, message: "Satellite imagery not available" });
       }
+    } catch (e) {
+      sendJson(response, 500, { ok: false, message: e.message });
+    }
+  }
+
+  if (url.pathname === "/api/reverse-geocode" && request.method === "GET") {
+    try {
+      const lat = parseFloat(url.searchParams.get("lat"));
+      const lon = parseFloat(url.searchParams.get("lon"));
+      if (isNaN(lat) || isNaN(lon)) {
+        sendJson(response, 400, { ok: false, message: "Missing lat/lon parameters" });
+        return;
+      }
+      const placeName = await reverseGeocode(lat, lon);
+      sendJson(response, 200, { ok: true, placeName: placeName || "My Location" });
     } catch (e) {
       sendJson(response, 500, { ok: false, message: e.message });
     }

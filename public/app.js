@@ -17,6 +17,7 @@ let userPosition = null;
 let gpsCityName = "";
 let gpsSpeed = 0;
 let gpsWatchId = null;
+let hasAutoFilledGPS = false;
 let is3DMode = false;
 let isDark = true;
 let vehicleMarker = null;
@@ -1297,8 +1298,9 @@ async function geolocateByIP() {
         if (data.region) {
           gpsCityName += `, ${data.region}`;
         }
-        if (currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
+        if (!hasAutoFilledGPS && currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
           ui.fromInput.value = gpsCityName;
+          hasAutoFilledGPS = true;
           map.flyTo({
             center: [userPosition.lng, userPosition.lat],
             zoom: 9
@@ -1326,8 +1328,9 @@ async function geolocateByIP() {
         if (data.regionName) {
           gpsCityName += `, ${data.regionName}`;
         }
-        if (currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
+        if (!hasAutoFilledGPS && currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
           ui.fromInput.value = gpsCityName;
+          hasAutoFilledGPS = true;
           map.flyTo({
             center: [userPosition.lng, userPosition.lat],
             zoom: 9
@@ -1373,29 +1376,21 @@ function initGPS() {
       ui.gpsStatus.querySelector(".status-text").textContent = "GPS Synced";
 
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userPosition.lat}&lon=${userPosition.lng}&countrycodes=in`, {
-          headers: { "User-Agent": "E-Horizon-AI-Smart-Travel-Map/1.0" }
-        });
+        const res = await fetch(`/api/reverse-geocode?lat=${userPosition.lat}&lon=${userPosition.lng}`);
         if (res.ok) {
           const data = await res.json();
-          const address = data.address || {};
-          const taluk = address.subdistrict || address.county || "";
-          const place = address.suburb || address.neighbourhood || address.village || address.town || address.road || address.city || "";
+          gpsCityName = data.placeName || "My Location";
           
-          if (taluk && place && taluk.toLowerCase().trim() !== place.toLowerCase().trim()) {
-            gpsCityName = `${taluk.trim()}, ${place.trim()}`;
-          } else {
-            gpsCityName = place || taluk || "My Location";
-          }
-          
-          if (currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === gpsCityName || ui.fromInput.value.includes(","))) {
+          if (!hasAutoFilledGPS && currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
             ui.fromInput.value = gpsCityName;
+            hasAutoFilledGPS = true;
           }
         }
       } catch (err) {
         console.warn("[GPS reverseGeocode failed]", err.message);
-        if (currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value.includes(","))) {
+        if (!hasAutoFilledGPS && currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "")) {
           ui.fromInput.value = `${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}`;
+          hasAutoFilledGPS = true;
         }
       }
     },
