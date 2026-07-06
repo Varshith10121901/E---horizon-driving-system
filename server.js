@@ -786,7 +786,7 @@ function estimateSegmentType(ndvi, points) {
   return "safe";
 }
 
-function buildSegmentsForRoute(routeCoords, startPlace, endPlace, rawPlaces) {
+async function buildSegmentsForRoute(routeCoords, startPlace, endPlace, rawPlaces) {
   const coords = [[startPlace.lon, startPlace.lat], ...routeCoords, [endPlace.lon, endPlace.lat]];
   const projectedPlaces = [];
   rawPlaces.forEach(p => {
@@ -872,6 +872,17 @@ function buildSegmentsForRoute(routeCoords, startPlace, endPlace, rawPlaces) {
     }
     
     syntheticPlaces.push({ name: endPlace.name, lat: endPlace.lat, lon: endPlace.lon, closestIdx: coords.length - 1 });
+    
+    // Resolve synthetic checkpoint names to actual cities/towns using reverse-geocoding
+    for (let p of syntheticPlaces) {
+      if (p.name.startsWith("Route Checkpoint")) {
+        const realName = await reverseGeocode(p.lat, p.lon);
+        if (realName) {
+          p.name = realName.split(",")[0].trim();
+        }
+      }
+    }
+    
     selectedPlaces = syntheticPlaces;
   }
   
@@ -2317,11 +2328,12 @@ async function getOrBuildRoutes(from, to) {
   console.log(`[Route Planner] Found ${rawPlaces.length} potential places.`);
   
   const routes = [];
-  drivingRoutes.forEach((route, idx) => {
+  for (let idx = 0; idx < drivingRoutes.length; idx++) {
+    const route = drivingRoutes[idx];
     console.log(`[Route Planner] Processing segments for Route alternative ${idx}...`);
-    const rData = buildSegmentsForRoute(route.geometry.coordinates, startPlace, endPlace, rawPlaces);
+    const rData = await buildSegmentsForRoute(route.geometry.coordinates, startPlace, endPlace, rawPlaces);
     routes.push(rData);
-  });
+  }
   
   // Extract hotels from elements (any element that is tourism=hotel/guest_house/motel)
   const rawHotels = rawPlaces.filter(el => el.tags && el.tags.tourism);
