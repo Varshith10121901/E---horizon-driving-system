@@ -1,0 +1,1487 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="description" content="DriveSphere — Intelligent Driving Dashboard with real-time 3D satellite maps, AI hazard detection, landslide alerts, and dynamic weather overlays for safe travel." />
+    <title>DriveSphere — Intelligent Driving Dashboard</title>
+
+    <!-- Tab Favicon SVG -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='silverGrad' x1='15' y1='15' x2='85' y2='85'%3E%3Cstop offset='0%25' stop-color='%23ffffff'/%3E%3Cstop offset='50%25' stop-color='%2394a3b8'/%3E%3Cstop offset='100%25' stop-color='%231e293b'/%3E%3C/linearGradient%3E%3ClinearGradient id='neonGreenGrad' x1='0' y1='0' x2='100' y2='100'%3E%3Cstop offset='0%25' stop-color='%2300f5d4'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='46' stroke='url(%23neonGreenGrad)' stroke-width='4' stroke-dasharray='140 25 60 15' fill='none'/%3E%3Cpath d='M42 16 C24 16 12 28 12 50 C12 72 24 84 42 84 C46 84 49 81 49 77 C49 73 46 70 42 70 C30 70 24 62 24 50 C24 38 30 30 42 30 C46 30 49 27 49 23 C49 19 46 16 42 16 Z' fill='url(%23silverGrad)'/%3E%3Cg transform='translate(50, 4) scale(0.65)'%3E%3Cpath d='M0 -6 C-3.3 -6 -6 -3.3 -6 0 C-6 4.5 0 10 0 10 C0 10 6 4.5 6 0 C6 -3.3 3.3 -6 0 -6 Z' fill='%2300f5d4'/%3E%3C/g%3E%3C/svg%3E" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+    <!-- MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+    <!-- Three.js for 3D effects -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <link rel="stylesheet" href="/styles.css" />
+
+    <style>
+      /* ========== SECTION 1: CINEMATIC INTRO ========== */
+      #cinematicIntro {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: #000000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+      }
+      #cinematicIntro.fade-out {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.6s ease;
+      }
+
+      /* Particle dots */
+      .intro-particles {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .intro-particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: rgba(0, 245, 212, 0.4);
+        will-change: transform, opacity;
+        animation: particleFloat linear infinite;
+      }
+      @keyframes particleFloat {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+      }
+
+      /* Logo draw-on */
+      .intro-logo-wrap {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 32px;
+      }
+      .intro-logo-svg {
+        width: 180px;
+        height: 180px;
+        filter: drop-shadow(0 0 35px rgba(0, 245, 212, 0.25));
+      }
+      /* Stroke drawing animations for intro */
+      .intro-logo-svg .draw-d-shape {
+        stroke-dasharray: 400;
+        stroke-dashoffset: 400;
+        animation: svgDrawOn 2s cubic-bezier(0.25, 0.8, 0.25, 1) 0.3s forwards;
+        stroke: #ffffff;
+        stroke-width: 0.5;
+      }
+      .intro-logo-svg .draw-road {
+        stroke-dasharray: 300;
+        stroke-dashoffset: 300;
+        animation: svgDrawOn 1.6s cubic-bezier(0.25, 0.8, 0.25, 1) 0.6s forwards;
+      }
+      .intro-logo-svg .draw-orbit {
+        stroke-dasharray: 300;
+        stroke-dashoffset: 300;
+        animation: svgDrawOn 2.2s cubic-bezier(0.25, 0.8, 0.25, 1) 0.1s forwards, rotateOrbit 25s linear infinite 2.2s;
+        transform-origin: 50px 50px;
+      }
+      @keyframes svgDrawOn {
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes rotateOrbit {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* Tagline typing */
+      .intro-tagline {
+        position: relative;
+        z-index: 2;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.3rem;
+        color: rgba(255,255,255,0.9);
+        letter-spacing: 2px;
+        overflow: hidden;
+        white-space: nowrap;
+        border-right: 2px solid #00f5d4;
+        width: 0;
+        animation: typeIn 1.8s steps(26) 1.2s forwards, blinkCaret 0.6s step-end infinite 1.2s;
+      }
+      @keyframes typeIn {
+        to { width: 26ch; }
+      }
+      @keyframes blinkCaret {
+        50% { border-color: transparent; }
+      }
+
+      /* Skip button */
+      .intro-skip {
+        position: absolute;
+        bottom: 32px;
+        right: 40px;
+        z-index: 3;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.45);
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      .intro-skip:hover {
+        opacity: 0.8;
+        transform: scale(1.04);
+      }
+
+      /* ========== SECTION 2: LANDING PAGE ========== */
+      #landingPage {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: none;
+        background: #000000;
+        font-family: 'Inter', sans-serif;
+      }
+      .landing-split {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Left Hero */
+      .landing-hero {
+        flex: 0 0 58%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 60px 64px;
+        position: relative;
+        overflow: hidden;
+      }
+      .landing-hero::before {
+        content: '';
+        position: absolute;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(0,245,212,0.08) 0%, transparent 70%);
+        top: 20%;
+        left: -10%;
+        pointer-events: none;
+      }
+      .landing-hero-logo {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 24px;
+        filter: drop-shadow(0 0 40px rgba(0,245,212,0.2));
+      }
+      .landing-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #00f5d4 0%, #4ea8de 40%, #7b61ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 0 8px;
+        line-height: 1.1;
+      }
+      .landing-subtitle {
+        font-size: 1.15rem;
+        color: rgba(255,255,255,0.5);
+        margin: 0 0 48px;
+        font-weight: 400;
+      }
+
+      /* Feature Grid */
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        max-width: 540px;
+      }
+      .feature-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 14px;
+        padding: 20px;
+        opacity: 0;
+        transform: translateY(24px);
+        animation: featureIn 0.5s ease forwards;
+      }
+      .feature-card:nth-child(1) { animation-delay: 0.1s; }
+      .feature-card:nth-child(2) { animation-delay: 0.2s; }
+      .feature-card:nth-child(3) { animation-delay: 0.3s; }
+      .feature-card:nth-child(4) { animation-delay: 0.4s; }
+      @keyframes featureIn {
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .feature-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(0,245,212,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+      }
+      .feature-card-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+      .feature-card h4 {
+        margin: 0 0 4px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.88);
+      }
+      .feature-card p {
+        margin: 0;
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.38);
+        line-height: 1.4;
+      }
+
+      /* Right Login */
+      .landing-login {
+        flex: 0 0 42%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: rgba(255,255,255,0.01);
+      }
+      .landing-login::before {
+        content: '';
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(123,97,255,0.07) 0%, transparent 70%);
+        bottom: 10%;
+        right: -10%;
+        pointer-events: none;
+      }
+      .login-card {
+        width: 380px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px;
+        padding: 40px 36px;
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+      }
+      .login-card-logo {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 20px;
+      }
+      .login-card h2 {
+        margin: 0 0 6px;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: rgba(255,255,255,0.92);
+      }
+      .login-card .login-sub {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.38);
+        margin: 0 0 28px;
+      }
+      .login-card input {
+        width: 100%;
+        padding: 13px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.04);
+        color: #fff;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        outline: none;
+        transition: border-color 0.2s;
+        margin-bottom: 14px;
+        box-sizing: border-box;
+      }
+      .login-card input::placeholder {
+        color: rgba(255,255,255,0.25);
+      }
+      .login-card input:focus {
+        border-color: rgba(0,245,212,0.4);
+      }
+      .login-btn {
+        width: 100%;
+        padding: 13px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #00f5d4, #4ea8de);
+        color: #0a0a14;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s, opacity 0.15s;
+        margin-top: 4px;
+      }
+      .login-btn:hover {
+        transform: scale(1.015);
+        opacity: 0.92;
+      }
+      .login-divider {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: 20px 0;
+        color: rgba(255,255,255,0.2);
+        font-size: 0.8rem;
+      }
+      .login-divider::before, .login-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255,255,255,0.08);
+      }
+      .guest-btn {
+        width: 100%;
+        padding: 13px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        background: transparent;
+        color: rgba(255,255,255,0.6);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.15s, background 0.15s;
+      }
+      .guest-btn:hover {
+        background: rgba(255,255,255,0.04);
+        transform: scale(1.015);
+      }
+
+      /* Responsive landing */
+      @media (max-width: 900px) {
+        .landing-split { flex-direction: column; }
+        .landing-hero { flex: none; padding: 40px 28px; }
+        .landing-login { flex: none; padding: 20px 28px 40px; }
+        .login-card { width: 100%; max-width: 420px; }
+        .landing-title { font-size: 2.4rem; }
+        .feature-grid { max-width: 100%; }
+      }
+
+      /* ========== MAP PLACEHOLDER ANIMATION (Section 3 update) ========== */
+      .placeholder-anim {
+        margin-bottom: 24px;
+        animation: placeholderSpin 20s linear infinite;
+      }
+      @keyframes placeholderSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .placeholder-anim svg {
+        filter: drop-shadow(0 0 50px rgba(0,245,212,0.2));
+      }
+
+      /* Logout button */
+      #logoutBtn {
+        margin-left: 6px;
+      }
+      #logoutBtn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Animate feature card icon SVG strokes */
+      .feature-card-icon svg path,
+      .feature-card-icon svg circle,
+      .feature-card-icon svg rect,
+      .feature-card-icon svg line,
+      .feature-card-icon svg ellipse {
+        stroke: url(#featureIconGrad);
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- Hidden SVG defs for feature icons gradient -->
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <linearGradient id="featureIconGrad" x1="0" y1="0" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#00f5d4"/>
+          <stop offset="100%" stop-color="#7b61ff"/>
+        </linearGradient>
+      </defs>
+    </svg>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 1: CINEMATIC INTRO OVERLAY                           -->
+    <!-- ============================================================ -->
+    <div id="cinematicIntro">
+      <!-- Particle dots -->
+      <div class="intro-particles">
+        <span class="intro-particle" style="left:5%;top:90%;animation-duration:4.2s;animation-delay:0s;width:2px;height:2px;"></span>
+        <span class="intro-particle" style="left:12%;top:85%;animation-duration:5.1s;animation-delay:0.3s;"></span>
+        <span class="intro-particle" style="left:20%;top:95%;animation-duration:3.8s;animation-delay:0.8s;width:4px;height:4px;background:rgba(78,168,222,0.4);"></span>
+        <span class="intro-particle" style="left:28%;top:88%;animation-duration:4.6s;animation-delay:0.1s;"></span>
+        <span class="intro-particle" style="left:35%;top:92%;animation-duration:5.5s;animation-delay:1.2s;width:2px;height:2px;background:rgba(123,97,255,0.4);"></span>
+        <span class="intro-particle" style="left:42%;top:80%;animation-duration:3.5s;animation-delay:0.5s;"></span>
+        <span class="intro-particle" style="left:48%;top:97%;animation-duration:4.9s;animation-delay:0.7s;width:4px;height:4px;"></span>
+        <span class="intro-particle" style="left:55%;top:84%;animation-duration:4.3s;animation-delay:1.5s;background:rgba(78,168,222,0.5);"></span>
+        <span class="intro-particle" style="left:62%;top:91%;animation-duration:5.2s;animation-delay:0.2s;width:2px;height:2px;"></span>
+        <span class="intro-particle" style="left:68%;top:86%;animation-duration:3.9s;animation-delay:1.0s;"></span>
+        <span class="intro-particle" style="left:75%;top:94%;animation-duration:4.7s;animation-delay:0.6s;background:rgba(123,97,255,0.35);"></span>
+        <span class="intro-particle" style="left:82%;top:82%;animation-duration:5.0s;animation-delay:1.3s;width:4px;height:4px;"></span>
+        <span class="intro-particle" style="left:88%;top:93%;animation-duration:4.1s;animation-delay:0.4s;"></span>
+        <span class="intro-particle" style="left:94%;top:87%;animation-duration:3.6s;animation-delay:0.9s;width:2px;height:2px;background:rgba(78,168,222,0.45);"></span>
+        <span class="intro-particle" style="left:8%;top:70%;animation-duration:6.0s;animation-delay:1.8s;"></span>
+        <span class="intro-particle" style="left:30%;top:75%;animation-duration:5.8s;animation-delay:2.0s;width:2px;height:2px;"></span>
+        <span class="intro-particle" style="left:50%;top:78%;animation-duration:5.3s;animation-delay:1.6s;background:rgba(0,245,212,0.6);"></span>
+        <span class="intro-particle" style="left:70%;top:72%;animation-duration:6.2s;animation-delay:2.2s;"></span>
+        <span class="intro-particle" style="left:90%;top:76%;animation-duration:5.7s;animation-delay:1.4s;width:3px;height:3px;"></span>
+        <span class="intro-particle" style="left:15%;top:98%;animation-duration:4.0s;animation-delay:0.15s;background:rgba(123,97,255,0.5);width:3px;height:3px;"></span>
+      </div>
+
+      <!-- Animated Logo -->
+      <div class="intro-logo-wrap">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="intro-logo-svg">
+          <defs>
+            <!-- Metallic Silver Gradient -->
+            <linearGradient id="silverGrad" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="25%" stop-color="#e2e8f0"/>
+              <stop offset="50%" stop-color="#94a3b8"/>
+              <stop offset="75%" stop-color="#475569"/>
+              <stop offset="100%" stop-color="#1e293b"/>
+            </linearGradient>
+
+            <!-- Glowing Cyber Green Gradient -->
+            <linearGradient id="neonGreenGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00f5d4"/>
+              <stop offset="50%" stop-color="#10b981"/>
+              <stop offset="100%" stop-color="#059669"/>
+            </linearGradient>
+
+            <!-- Mountain Gradients -->
+            <linearGradient id="mountGrad1" x1="50" y1="25" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#1e293b"/>
+              <stop offset="100%" stop-color="#020617"/>
+            </linearGradient>
+            <linearGradient id="mountGrad2" x1="65" y1="35" x2="65" y2="65" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#334155"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+
+            <!-- Sky Green Aura -->
+            <radialGradient id="auroraGlow" cx="65%" cy="40%" r="50%" fx="65%" fy="40%">
+              <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.35"/>
+              <stop offset="60%" stop-color="#10b981" stop-opacity="0.1"/>
+              <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Aurora sky glow behind mountains -->
+          <circle cx="50" cy="50" r="44" fill="url(#auroraGlow)"/>
+
+          <!-- Mountains -->
+          <!-- Left Mountain Peak -->
+          <path d="M22 62 L48 26 L65 62 Z" fill="url(#mountGrad1)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+          <!-- Right Mountain Peak -->
+          <path d="M42 62 L66 32 L88 62 Z" fill="url(#mountGrad2)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+
+          <!-- Pine trees flanking the road -->
+          <path d="M26 62 L29 55 L27 55 L30 49 L28 49 L31 43 L34 49 L32 49 L35 55 L33 55 L36 62 Z" fill="#065f46" opacity="0.95"/>
+          <path d="M20 62 L22 56 L21 56 L23 51 L22 51 L24 46 L27 51 L26 51 L28 56 L27 56 L29 62 Z" fill="#047857" opacity="0.8"/>
+          <path d="M72 62 L75 54 L73 54 L77 47 L81 54 L79 54 L82 62 Z" fill="#047857" opacity="0.9"/>
+
+          <!-- Winding Road curving into the horizon -->
+          <path d="M52 42 C54 48 57 52 48 60 C38 68 28 75 42 85 C56 95 72 90 78 82 C84 74 72 66 62 58 C52 50 51 46 52 42 Z" fill="#0f172a" stroke="url(#neonGreenGrad)" stroke-width="1" class="draw-road"/>
+          <path d="M52.2 43 C53.5 48 55 52 47 60 C39 68 31 75 43 83 C55 91 67 87 72 82 C77 77 68 70 59 62 C50 54 50.5 47 52.2 43" stroke="#ffffff" stroke-width="0.6" stroke-dasharray="2 3" fill="none" opacity="0.8"/>
+
+          <!-- Giant Metallic letter 'D' forming the left shell -->
+          <path d="M42 16 
+                   C24 16 12 28 12 50 
+                   C12 72 24 84 42 84 
+                   C46 84 49 81 49 77 
+                   C49 73 46 70 42 70 
+                   C30 70 24 62 24 50 
+                   C24 38 30 30 42 30 
+                   C46 30 49 27 49 23 
+                   C49 19 46 16 42 16 Z" 
+                fill="url(#silverGrad)"
+                class="draw-d-shape"/>
+
+          <!-- Outer orbital track (dashed ring) -->
+          <circle cx="50" cy="50" r="46" stroke="url(#neonGreenGrad)" stroke-width="1.5" stroke-dasharray="140 25 60 15" fill="none" opacity="0.8" class="draw-orbit"/>
+
+          <!-- Location Pin icon at top -->
+          <g transform="translate(50, 4) scale(0.65)">
+            <path d="M0 -6 C-3.3 -6 -6 -3.3 -6 0 C-6 4.5 0 10 0 10 C0 10 6 4.5 6 0 C6 -3.3 3.3 -6 0 -6 Z" fill="#00f5d4"/>
+            <circle cx="0" cy="0" r="2" fill="#020617"/>
+          </g>
+
+          <!-- Satellite icon at top-right -->
+          <g transform="translate(80, 20) rotate(35) scale(0.55)">
+            <rect x="-9" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+            <rect x="3" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+            <line x1="-3" y1="0" x2="3" y2="0" stroke="#94a3b8" stroke-width="1"/>
+            <rect x="-1.5" y="-4" width="3" height="8" rx="0.75" fill="#f8fafc" stroke="#475569" stroke-width="0.5"/>
+            <path d="M-3 6 L3 6 M0 4 L0 8" stroke="#00f5d4" stroke-width="0.75"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Tagline -->
+      <div class="intro-tagline">See Beyond. Drive Safer.</div>
+
+      <!-- Skip -->
+      <button class="intro-skip" id="introSkipBtn">Skip</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 2: LANDING PAGE                                      -->
+    <!-- ============================================================ -->
+    <div id="landingPage" style="display:none;">
+      <div class="landing-split">
+        <!-- Left Hero -->
+        <div class="landing-hero">
+          <!-- Hero Logo -->
+          <div class="landing-logo-container">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="landing-hero-logo">
+              <defs>
+                <!-- Metallic Silver Gradient -->
+                <linearGradient id="silverGrad2" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="25%" stop-color="#e2e8f0"/>
+                  <stop offset="50%" stop-color="#94a3b8"/>
+                  <stop offset="75%" stop-color="#475569"/>
+                  <stop offset="100%" stop-color="#1e293b"/>
+                </linearGradient>
+
+                <!-- Glowing Cyber Green Gradient -->
+                <linearGradient id="neonGreenGrad2" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#00f5d4"/>
+                  <stop offset="50%" stop-color="#10b981"/>
+                  <stop offset="100%" stop-color="#059669"/>
+                </linearGradient>
+
+                <!-- Mountain Gradients -->
+                <linearGradient id="mountGrad1_2" x1="50" y1="25" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#1e293b"/>
+                  <stop offset="100%" stop-color="#020617"/>
+                </linearGradient>
+                <linearGradient id="mountGrad2_2" x1="65" y1="35" x2="65" y2="65" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#334155"/>
+                  <stop offset="100%" stop-color="#0f172a"/>
+                </linearGradient>
+
+                <!-- Sky Green Aura -->
+                <radialGradient id="auroraGlow2" cx="65%" cy="40%" r="50%" fx="65%" fy="40%">
+                  <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.35"/>
+                  <stop offset="60%" stop-color="#10b981" stop-opacity="0.1"/>
+                  <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- Aurora sky glow behind mountains -->
+              <circle cx="50" cy="50" r="44" fill="url(#auroraGlow2)"/>
+
+              <!-- Mountains -->
+              <path d="M22 62 L48 26 L65 62 Z" fill="url(#mountGrad1_2)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+              <path d="M42 62 L66 32 L88 62 Z" fill="url(#mountGrad2_2)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+
+              <!-- Pine trees -->
+              <path d="M26 62 L29 55 L27 55 L30 49 L28 49 L31 43 L34 49 L32 49 L35 55 L33 55 L36 62 Z" fill="#065f46" opacity="0.95"/>
+              <path d="M20 62 L22 56 L21 56 L23 51 L22 51 L24 46 L27 51 L26 51 L28 56 L27 56 L29 62 Z" fill="#047857" opacity="0.8"/>
+              <path d="M72 62 L75 54 L73 54 L77 47 L81 54 L79 54 L82 62 Z" fill="#047857" opacity="0.9"/>
+
+              <!-- Winding Road -->
+              <path d="M52 42 C54 48 57 52 48 60 C38 68 28 75 42 85 C56 95 72 90 78 82 C84 74 72 66 62 58 C52 50 51 46 52 42 Z" fill="#0f172a" stroke="url(#neonGreenGrad2)" stroke-width="1"/>
+              <path d="M52.2 43 C53.5 48 55 52 47 60 C39 68 31 75 43 83 C55 91 67 87 72 82 C77 77 68 70 59 62 C50 54 50.5 47 52.2 43" stroke="#ffffff" stroke-width="0.6" stroke-dasharray="2 3" fill="none" opacity="0.8"/>
+
+              <!-- Giant Metallic 'D' -->
+              <path d="M42 16 
+                       C24 16 12 28 12 50 
+                       C12 72 24 84 42 84 
+                       C46 84 49 81 49 77 
+                       C49 73 46 70 42 70 
+                       C30 70 24 62 24 50 
+                       C24 38 30 30 42 30 
+                       C46 30 49 27 49 23 
+                       C49 19 46 16 42 16 Z" 
+                    fill="url(#silverGrad2)"/>
+
+              <!-- Outer orbital track -->
+              <circle cx="50" cy="50" r="46" stroke="url(#neonGreenGrad2)" stroke-width="1.5" stroke-dasharray="140 25 60 15" fill="none" opacity="0.8" class="draw-orbit"/>
+
+              <!-- Location Pin -->
+              <g transform="translate(50, 4) scale(0.65)">
+                <path d="M0 -6 C-3.3 -6 -6 -3.3 -6 0 C-6 4.5 0 10 0 10 C0 10 6 4.5 6 0 C6 -3.3 3.3 -6 0 -6 Z" fill="#00f5d4"/>
+                <circle cx="0" cy="0" r="2" fill="#020617"/>
+              </g>
+
+              <!-- Satellite -->
+              <g transform="translate(80, 20) rotate(35) scale(0.55)">
+                <rect x="-9" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+                <rect x="3" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+                <line x1="-3" y1="0" x2="3" y2="0" stroke="#94a3b8" stroke-width="1"/>
+                <rect x="-1.5" y="-4" width="3" height="8" rx="0.75" fill="#f8fafc" stroke="#475569" stroke-width="0.5"/>
+                <path d="M-3 6 L3 6 M0 4 L0 8" stroke="#00f5d4" stroke-width="0.75"/>
+              </g>
+            </svg>
+          </div>
+
+          <h1 class="landing-title">DriveSphere</h1>
+          <p class="landing-subtitle">Your Intelligent Driving Companion</p>
+
+          <!-- Feature Cards 2x2 -->
+          <div class="feature-grid">
+            <!-- 1. Hazard Detection -->
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#00f5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <h4>Real-Time Hazard Detection</h4>
+              <p>Live news &amp; NASA satellite scanning</p>
+            </div>
+            <!-- 2. 3D Navigation -->
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4ea8de" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                </svg>
+              </div>
+              <h4>3D Satellite Navigation</h4>
+              <p>MapLibre GL with terrain elevation</p>
+            </div>
+            <!-- 3. Weather Intelligence -->
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7b61ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
+                  <line x1="8" y1="22" x2="7" y2="24"/><line x1="12" y1="22" x2="11" y2="24"/><line x1="16" y1="22" x2="15" y2="24"/>
+                </svg>
+              </div>
+              <h4>Weather Intelligence</h4>
+              <p>Precipitation, NDVI &amp; landslide risk analysis</p>
+            </div>
+            <!-- 4. Emergency Shelter -->
+            <div class="feature-card">
+              <div class="feature-card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#00f5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18M3 7v14M21 7v14M6 7V4a1 1 0 011-1h10a1 1 0 011 1v3M9 21v-4h6v4"/>
+                </svg>
+              </div>
+              <h4>Emergency Shelter</h4>
+              <p>Auto hotel recommendations when danger ahead</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Login Panel -->
+        <div class="landing-login">
+          <div class="login-card">
+            <!-- Mini Logo -->
+            <svg class="login-card-logo" viewBox="0 0 100 100" fill="none">
+              <defs>
+                <linearGradient id="loginLogoGrad" x1="0" y1="0" x2="100" y2="100">
+                  <stop offset="0%" stop-color="#00f5d4"/>
+                  <stop offset="50%" stop-color="#4ea8de"/>
+                  <stop offset="100%" stop-color="#7b61ff"/>
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="44" stroke="url(#loginLogoGrad)" stroke-width="3" fill="none"/>
+              <ellipse cx="50" cy="50" rx="44" ry="18" stroke="url(#loginLogoGrad)" stroke-width="2" fill="none" opacity="0.5" transform="rotate(-25 50 50)"/>
+              <path d="M25 50 Q37 30 50 35 Q63 40 55 50 Q47 60 60 65 Q73 70 75 50" stroke="url(#loginLogoGrad)" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <circle cx="75" cy="50" r="4" fill="#00f5d4">
+                <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+
+            <h2>Welcome Back</h2>
+            <p class="login-sub">Sign in to access your driving dashboard</p>
+
+            <input type="email" id="loginEmail" placeholder="Email address" autocomplete="email" />
+            <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" />
+            <button class="login-btn" id="loginBtn">Sign In</button>
+
+            <div class="login-divider">or</div>
+
+            <button class="guest-btn" id="guestBtn">Continue as Guest</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 3: MAIN DASHBOARD (existing app-shell, preserved)    -->
+    <!-- ============================================================ -->
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loader-content">
+        <div class="loader-globe">
+          <div class="globe-ring ring-1"></div>
+          <div class="globe-ring ring-2"></div>
+          <div class="globe-ring ring-3"></div>
+          <div class="globe-core"></div>
+        </div>
+        <h2 class="loader-title">DriveSphere</h2>
+        <p class="loader-sub">Initializing 3D Map &amp; AI Systems…</p>
+        <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+      </div>
+    </div>
+
+    <main class="app-shell" id="appShell" style="display:none;">
+      <!-- Top Navigation Bar -->
+      <header class="topbar" id="topbar">
+        <div class="topbar-left">
+          <div class="logo-mark">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="topbar-logo-svg">
+              <defs>
+                <!-- Metallic Silver Gradient -->
+                <linearGradient id="silverGrad3" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="25%" stop-color="#e2e8f0"/>
+                  <stop offset="50%" stop-color="#94a3b8"/>
+                  <stop offset="75%" stop-color="#475569"/>
+                  <stop offset="100%" stop-color="#1e293b"/>
+                </linearGradient>
+
+                <!-- Glowing Cyber Green Gradient -->
+                <linearGradient id="neonGreenGrad3" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#00f5d4"/>
+                  <stop offset="50%" stop-color="#10b981"/>
+                  <stop offset="100%" stop-color="#059669"/>
+                </linearGradient>
+
+                <!-- Mountain Gradients -->
+                <linearGradient id="mountGrad1_3" x1="50" y1="25" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#1e293b"/>
+                  <stop offset="100%" stop-color="#020617"/>
+                </linearGradient>
+                <linearGradient id="mountGrad2_3" x1="65" y1="35" x2="65" y2="65" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#334155"/>
+                  <stop offset="100%" stop-color="#0f172a"/>
+                </linearGradient>
+
+                <!-- Sky Green Aura -->
+                <radialGradient id="auroraGlow3" cx="65%" cy="40%" r="50%" fx="65%" fy="40%">
+                  <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.35"/>
+                  <stop offset="60%" stop-color="#10b981" stop-opacity="0.1"/>
+                  <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- Aurora sky glow behind mountains -->
+              <circle cx="50" cy="50" r="44" fill="url(#auroraGlow3)"/>
+
+              <!-- Mountains -->
+              <path d="M22 62 L48 26 L65 62 Z" fill="url(#mountGrad1_3)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+              <path d="M42 62 L66 32 L88 62 Z" fill="url(#mountGrad2_3)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+
+              <!-- Pine trees -->
+              <path d="M26 62 L29 55 L27 55 L30 49 L28 49 L31 43 L34 49 L32 49 L35 55 L33 55 L36 62 Z" fill="#065f46" opacity="0.95"/>
+              <path d="M20 62 L22 56 L21 56 L23 51 L22 51 L24 46 L27 51 L26 51 L28 56 L27 56 L29 62 Z" fill="#047857" opacity="0.8"/>
+              <path d="M72 62 L75 54 L73 54 L77 47 L81 54 L79 54 L82 62 Z" fill="#047857" opacity="0.9"/>
+
+              <!-- Winding Road -->
+              <path d="M52 42 C54 48 57 52 48 60 C38 68 28 75 42 85 C56 95 72 90 78 82 C84 74 72 66 62 58 C52 50 51 46 52 42 Z" fill="#0f172a" stroke="url(#neonGreenGrad3)" stroke-width="1"/>
+              <path d="M52.2 43 C53.5 48 55 52 47 60 C39 68 31 75 43 83 C55 91 67 87 72 82 C77 77 68 70 59 62 C50 54 50.5 47 52.2 43" stroke="#ffffff" stroke-width="0.6" stroke-dasharray="2 3" fill="none" opacity="0.8"/>
+
+              <!-- Giant Metallic 'D' -->
+              <path d="M42 16 
+                       C24 16 12 28 12 50 
+                       C12 72 24 84 42 84 
+                       C46 84 49 81 49 77 
+                       C49 73 46 70 42 70 
+                       C30 70 24 62 24 50 
+                       C24 38 30 30 42 30 
+                       C46 30 49 27 49 23 
+                       C49 19 46 16 42 16 Z" 
+                    fill="url(#silverGrad3)"/>
+
+              <!-- Outer orbital track -->
+              <circle cx="50" cy="50" r="46" stroke="url(#neonGreenGrad3)" stroke-width="1.5" stroke-dasharray="140 25 60 15" fill="none" opacity="0.8" class="draw-orbit"/>
+
+              <!-- Location Pin -->
+              <g transform="translate(50, 4) scale(0.65)">
+                <path d="M0 -6 C-3.3 -6 -6 -3.3 -6 0 C-6 4.5 0 10 0 10 C0 10 6 4.5 6 0 C6 -3.3 3.3 -6 0 -6 Z" fill="#00f5d4"/>
+                <circle cx="0" cy="0" r="2" fill="#020617"/>
+              </g>
+
+              <!-- Satellite -->
+              <g transform="translate(80, 20) rotate(35) scale(0.55)">
+                <rect x="-9" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+                <rect x="3" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+                <line x1="-3" y1="0" x2="3" y2="0" stroke="#94a3b8" stroke-width="1"/>
+                <rect x="-1.5" y="-4" width="3" height="8" rx="0.75" fill="#f8fafc" stroke="#475569" stroke-width="0.5"/>
+                <path d="M-3 6 L3 6 M0 4 L0 8" stroke="#00f5d4" stroke-width="0.75"/>
+              </g>
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">DriveSphere</p>
+            <h1>Intelligent Driving Dashboard</h1>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="status-pill" id="connectionStatus">
+            <span class="status-dot"></span>
+            <span class="status-text">Connecting…</span>
+          </div>
+          <div class="status-pill gps-pill" id="gpsStatus">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+            </svg>
+            <span class="status-text">GPS Pending</span>
+          </div>
+          <button class="icon-btn" id="toggleTheme" title="Toggle dark mode" aria-label="Toggle dark mode">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="logoutBtn" title="Logout" aria-label="Logout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Dashboard Grid -->
+      <section class="dashboard" id="dashboard">
+        <!-- LEFT SIDEBAR — Controls & AI Detection -->
+        <aside class="sidebar" id="sidebar">
+          <!-- Trip Planner -->
+          <div class="glass-card" id="tripPlannerCard">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <span class="card-label">Trip Planner</span>
+            </div>
+            <form id="planForm" class="plan-form">
+              <div class="input-group">
+                <label for="fromInput">From</label>
+                <div class="input-wrapper">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>
+                  <input id="fromInput" name="from" value="" autocomplete="off" placeholder="Enter origin or allow GPS..." />
+                </div>
+              </div>
+              <div class="route-connector">
+                <div class="connector-line"></div>
+                <div class="connector-dot"></div>
+                <div class="connector-dot"></div>
+                <div class="connector-dot"></div>
+              </div>
+              <div class="input-group">
+                <label for="toInput">To</label>
+                <div class="input-wrapper">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <input id="toInput" name="to" value="" autocomplete="off" placeholder="Enter destination..." />
+                </div>
+              </div>
+
+              <button class="primary-button" type="submit" id="startTripBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                Start Navigation
+              </button>
+              <button class="btn-outline" type="button" id="stopTripBtn" style="display: none; margin-top: 10px; width: 100%; border-color: var(--red); color: var(--red); justify-content: center; gap: 8px; align-items: center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                Stop Searching
+              </button>
+            </form>
+          </div>
+          
+          <!-- Route Option Selector -->
+          <div class="glass-card" id="routeSelectorCard" style="display: none; margin-bottom: 15px;">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </div>
+              <span class="card-label">Alternative Routes</span>
+            </div>
+            <div class="route-selector-list" id="routeSelectorList" style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;"></div>
+          </div>
+
+
+          <div class="glass-card" id="aiRiskCard">
+            <div class="card-header">
+              <div class="card-icon ai-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <span class="card-label">AI Risk Copilot</span>
+              <span class="ai-badge" id="riskLevelBadge">SAFE</span>
+            </div>
+            <div class="risk-display-container">
+              <div class="risk-ring-wrapper">
+                <svg viewBox="0 0 100 100" class="risk-ring-svg">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"/>
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--green)" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="264" id="riskRingArc" transform="rotate(-90 50 50)"/>
+                </svg>
+                <div class="risk-ring-text">
+                  <strong id="riskScore">0%</strong>
+                  <span>Risk</span>
+                </div>
+              </div>
+              <div class="risk-details">
+                <div class="risk-metric">
+                  <span>Vegetation (NDVI)</span>
+                  <strong id="ndviDisplay">—</strong>
+                </div>
+                <div class="risk-metric">
+                  <span>Speed Limit board</span>
+                  <strong id="ndviSpeedBoard">—</strong>
+                </div>
+              </div>
+            </div>
+            <div class="advice-box" id="adviceBox">
+              <span class="advice-title">Driving Guide &amp; Hazard Advisory</span>
+              <p id="drivingAdvice">Scanning conditions…</p>
+              <div id="hazardAdvisories" style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; font-size: 0.75rem; display: flex; flex-direction: column; gap: 6px; text-align: left;"></div>
+            </div>
+          </div>
+
+          <!-- AI Road Detection -->
+          <div class="glass-card" id="aiDetectionCard">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+              <span class="card-label">Via Places Path</span>
+            </div>
+            <div class="card-body" style="padding: 12px 16px;">
+              <!-- Dummy hidden elements to keep JS references valid -->
+              <div style="display: none;">
+                <div id="indRoadType"></div>
+                <div id="roadType"></div>
+                <div id="indCurvature"></div>
+                <div id="roadCurvature"></div>
+                <div id="indLandslide"></div>
+                <div id="landslideRisk"></div>
+                <div id="indRainFreq"></div>
+                <div id="rainFrequency"></div>
+              </div>
+              
+              <!-- One-line via places sequence -->
+              <div id="viaPlacesInlineContainer" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; font-weight: 500; line-height: 1.5; color: var(--ink-secondary);">
+                <span>Waiting for route planning…</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Route Legend -->
+          <div class="glass-card" id="legendCard">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              </div>
+              <span class="card-label">Route Legend</span>
+            </div>
+            <div class="legend-list" id="legendList" aria-label="Route color legend"></div>
+          </div>
+        </aside>
+
+        <!-- CENTER — 3D Map -->
+        <section class="map-container" id="mapContainer">
+          <!-- 3D Map -->
+          <div class="map-wrapper" id="mapWrapper">
+            <div id="mapPlaceholder" class="map-placeholder">
+              <div class="placeholder-logo-wrap">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="placeholder-logo-img">
+                  <defs>
+                    <!-- Metallic Silver Gradient -->
+                    <linearGradient id="silverGrad4" x1="15" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#ffffff"/>
+                      <stop offset="25%" stop-color="#e2e8f0"/>
+                      <stop offset="50%" stop-color="#94a3b8"/>
+                      <stop offset="75%" stop-color="#475569"/>
+                      <stop offset="100%" stop-color="#1e293b"/>
+                    </linearGradient>
+
+                    <!-- Glowing Cyber Green Gradient -->
+                    <linearGradient id="neonGreenGrad4" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#00f5d4"/>
+                      <stop offset="50%" stop-color="#10b981"/>
+                      <stop offset="100%" stop-color="#059669"/>
+                    </linearGradient>
+
+                    <!-- Mountain Gradients -->
+                    <linearGradient id="mountGrad1_4" x1="50" y1="25" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#1e293b"/>
+                      <stop offset="100%" stop-color="#020617"/>
+                    </linearGradient>
+                    <linearGradient id="mountGrad2_4" x1="65" y1="35" x2="65" y2="65" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#334155"/>
+                      <stop offset="100%" stop-color="#0f172a"/>
+                    </linearGradient>
+
+                    <!-- Sky Green Aura -->
+                    <radialGradient id="auroraGlow4" cx="65%" cy="40%" r="50%" fx="65%" fy="40%">
+                      <stop offset="0%" stop-color="#00f5d4" stop-opacity="0.35"/>
+                      <stop offset="60%" stop-color="#10b981" stop-opacity="0.1"/>
+                      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+                    </radialGradient>
+                  </defs>
+
+                  <!-- Aurora sky glow behind mountains -->
+                  <circle cx="50" cy="50" r="44" fill="url(#auroraGlow4)"/>
+
+                  <!-- Mountains -->
+                  <path d="M22 62 L48 26 L65 62 Z" fill="url(#mountGrad1_4)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                  <path d="M42 62 L66 32 L88 62 Z" fill="url(#mountGrad2_4)" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+
+                  <!-- Pine trees -->
+                  <path d="M26 62 L29 55 L27 55 L30 49 L28 49 L31 43 L34 49 L32 49 L35 55 L33 55 L36 62 Z" fill="#065f46" opacity="0.95"/>
+                  <path d="M20 62 L22 56 L21 56 L23 51 L22 51 L24 46 L27 51 L26 51 L28 56 L27 56 L29 62 Z" fill="#047857" opacity="0.8"/>
+                  <path d="M72 62 L75 54 L73 54 L77 47 L81 54 L79 54 L82 62 Z" fill="#047857" opacity="0.9"/>
+
+                  <!-- Winding Road -->
+                  <path d="M52 42 C54 48 57 52 48 60 C38 68 28 75 42 85 C56 95 72 90 78 82 C84 74 72 66 62 58 C52 50 51 46 52 42 Z" fill="#0f172a" stroke="url(#neonGreenGrad4)" stroke-width="1"/>
+                  <path d="M52.2 43 C53.5 48 55 52 47 60 C39 68 31 75 43 83 C55 91 67 87 72 82 C77 77 68 70 59 62 C50 54 50.5 47 52.2 43" stroke="#ffffff" stroke-width="0.6" stroke-dasharray="2 3" fill="none" opacity="0.8"/>
+
+                  <!-- Giant Metallic 'D' -->
+                  <path d="M42 16 
+                           C24 16 12 28 12 50 
+                           C12 72 24 84 42 84 
+                           C46 84 49 81 49 77 
+                           C49 73 46 70 42 70 
+                           C30 70 24 62 24 50 
+                           C24 38 30 30 42 30 
+                           C46 30 49 27 49 23 
+                           C49 19 46 16 42 16 Z" 
+                        fill="url(#silverGrad4)"/>
+
+                  <!-- Outer orbital track -->
+                  <circle cx="50" cy="50" r="46" stroke="url(#neonGreenGrad4)" stroke-width="1.5" stroke-dasharray="140 25 60 15" fill="none" opacity="0.8" class="draw-orbit"/>
+
+                  <!-- Location Pin -->
+                  <g transform="translate(50, 4) scale(0.65)">
+                    <path d="M0 -6 C-3.3 -6 -6 -3.3 -6 0 C-6 4.5 0 10 0 10 C0 10 6 4.5 6 0 C6 -3.3 3.3 -6 0 -6 Z" fill="#00f5d4"/>
+                    <circle cx="0" cy="0" r="2" fill="#020617"/>
+                  </g>
+
+                  <!-- Satellite -->
+                  <g transform="translate(80, 20) rotate(35) scale(0.55)">
+                    <rect x="-9" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+                    <rect x="3" y="-2" width="6" height="4" rx="0.5" fill="#475569" stroke="#00f5d4" stroke-width="0.75"/>
+                    <line x1="-3" y1="0" x2="3" y2="0" stroke="#94a3b8" stroke-width="1"/>
+                    <rect x="-1.5" y="-4" width="3" height="8" rx="0.75" fill="#f8fafc" stroke="#475569" stroke-width="0.5"/>
+                    <path d="M-3 6 L3 6 M0 4 L0 8" stroke="#00f5d4" stroke-width="0.75"/>
+                  </g>
+                </svg>
+              </div>
+              <div class="placeholder-content">
+                <h2 class="glow-text">DriveSphere Navigator</h2>
+                <p>Enter destination to load 3D Satellite Map &amp; AI Routing</p>
+                <div class="input-trigger-hint">Default Start: User GPS Location</div>
+              </div>
+            </div>
+            <div id="map3d" class="map-3d" style="opacity: 0; pointer-events: none;"></div>
+            <div class="map-style-label" id="mapStyleLabel" style="display: none;">NASA Sat Overlay</div>
+
+            <!-- Map Notifications Overlay -->
+            <div id="mapNotificationOverlay" class="map-notification-overlay"></div>
+
+            <!-- Map Overlays -->
+            <div class="map-hud top-left-hud">
+              <div class="hud-item">
+                <span>Location</span>
+                <strong id="currentPlace">—</strong>
+              </div>
+              <div class="hud-divider"></div>
+              <div class="hud-item">
+                <span>Elevation</span>
+                <strong id="elevationDisplay">—</strong>
+              </div>
+            </div>
+
+
+
+            <div class="map-hud top-right-hud">
+              <button class="hud-btn" id="btn3DToggle" title="Toggle 3D View">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </button>
+              <button class="hud-btn" id="btnRecenter" title="Recenter Map">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>
+              </button>
+              <button class="hud-btn" id="btnDeviate" title="Simulate Route Deviation (Recalculate)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2m6.36 1.64l-1.42 1.42M22 12h-2m-1.64 6.36l-1.42-1.42M12 22v-2m-6.36-1.64l1.42-1.42M2 12h2m1.64-6.36l1.42 1.42" /><circle cx="12" cy="12" r="4"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></svg>
+              </button>
+              <button class="hud-btn" id="btnFullscreen" title="Fullscreen">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+              </button>
+              <button class="hud-btn" id="btnMapStyleSelect" title="Toggle Map Style (Dark / Sat / NDVI)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              </button>
+              <button class="hud-btn active" id="btnNasaLayer" title="NASA Events Overlay">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              </button>
+            </div>
+
+            <div class="map-hud bottom-hud" id="bottomHud" style="display: none;">
+              <div class="speed-gauge" id="speedGauge">
+                <svg viewBox="0 0 120 120" class="gauge-svg">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#gaugeGrad)" stroke-width="8" stroke-dasharray="327" stroke-dashoffset="327" stroke-linecap="round" id="gaugeArc" transform="rotate(-90 60 60)"/>
+                  <defs>
+                    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#00f5d4"/>
+                      <stop offset="50%" stop-color="#ffd166"/>
+                      <stop offset="100%" stop-color="#ef476f"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="gauge-text">
+                  <strong id="currentSpeed">0</strong>
+                  <span>km/h</span>
+                </div>
+              </div>
+              <div class="hud-divider"></div>
+              <div class="progress-ring-container">
+                <svg viewBox="0 0 80 80" class="progress-ring-svg">
+                  <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+                  <circle cx="40" cy="40" r="34" fill="none" stroke="url(#progressGrad)" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="213.6" stroke-linecap="round" id="progressRing" transform="rotate(-90 40 40)"/>
+                  <defs>
+                    <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#00f5d4"/>
+                      <stop offset="100%" stop-color="#7b61ff"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="progress-text">
+                  <strong id="progressPercent">0%</strong>
+                </div>
+              </div>
+              <div class="hud-meta">
+                <span>Remaining</span>
+                <strong id="remainingDistance">— km</strong>
+              </div>
+            </div>
+
+            <!-- NASA Event Alert Banner -->
+            <div class="alert-banner" id="alertBanner">
+              <div class="alert-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4m0 4h.01"/></svg>
+              </div>
+              <span id="alertText">Scanning for road hazards and weather advisories…</span>
+            </div>
+          </div>
+
+          <!-- Metric Strip -->
+          <div class="metric-strip" id="metricStrip">
+            <div class="metric-card">
+              <div class="metric-icon" style="--mc: var(--cyan)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </div>
+              <div>
+                <span>Speed</span>
+                <strong id="metricSpeed">— km/h</strong>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="--mc: var(--green)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <div>
+                <span>Safe Speed</span>
+                <strong id="metricSafeSpeed">— km/h</strong>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="--mc: var(--orange)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <div>
+                <span>Est. Delay</span>
+                <strong id="metricDelay">— min</strong>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="--mc: var(--purple)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+              </div>
+              <div>
+                <span>Road Status</span>
+                <strong id="metricStatus">—</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT SIDEBAR — Live Feed -->
+        <aside class="sidebar right-sidebar" id="rightSidebar">
+          <!-- Real-time Weather Widget -->
+          <div class="glass-card weather-card-expanded" id="weatherCard">
+            <div class="card-header">
+              <div class="card-icon weather-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
+              </div>
+              <span class="card-label">Live Weather Forecast</span>
+            </div>
+            
+            <div class="weather-split-grid">
+              <!-- Current weather -->
+              <div class="weather-section current-weather">
+                <span class="w-sec-label">CURRENT</span>
+                <div class="w-main">
+                  <strong class="w-temp" id="weatherTemp">—°C</strong>
+                  <span class="w-desc" id="weatherDesc">Syncing…</span>
+                </div>
+                <div class="w-grid">
+                  <div class="w-item">
+                    <span>Humidity</span>
+                    <strong id="weatherHumidity">—</strong>
+                  </div>
+                  <div class="w-item">
+                    <span>Wind</span>
+                    <strong id="weatherWind">—</strong>
+                  </div>
+                  <div class="w-item">
+                    <span>Rain</span>
+                    <strong id="weatherPrecip">—</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Next weather -->
+              <div class="weather-section next-weather">
+                <span class="w-sec-label">NEXT ZONE</span>
+                <div class="w-main">
+                  <strong class="w-temp" id="nextWeatherTemp">—°C</strong>
+                  <span class="w-desc" id="nextWeatherDesc">Syncing…</span>
+                </div>
+                <div id="viaPlacesTimeline" style="margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; display: none;">
+                  <h4 style="font-size: 0.75rem; color: var(--ink-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Upcoming Places</h4>
+                  <div class="timeline-container" id="timelineContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Travel Plan -->
+          <div class="glass-card" id="travelPlanCard">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </div>
+              <span class="card-label">Active Route</span>
+            </div>
+            <div class="plan-display">
+              <strong id="travelPlan">—</strong>
+              <p id="planMeta">—</p>
+            </div>
+          </div>
+
+          <!-- Google News Alerts Feed -->
+          <div class="glass-card" id="googleNewsCard">
+            <div class="card-header">
+              <div class="card-icon news-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2z"/><path d="M16 2v4M8 2v4M3 10h16M8 14h8M8 18h5"/></svg>
+              </div>
+              <span class="card-label">Live News Alerts</span>
+              <span class="news-live-dot"></span>
+            </div>
+            <div class="news-list" id="googleNewsList">
+              <div class="event-placeholder">Fetching real-time news alerts…</div>
+            </div>
+          </div>
+
+          <!-- Nearby Stays (Hotel Suggestion) -->
+          <div class="glass-card" id="hotelCard">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 7V4a1 1 0 011-1h10a1 1 0 011 1v3M9 21v-4h6v4"/></svg>
+              </div>
+              <span class="card-label">Recommended Hotels</span>
+            </div>
+            <div class="hotel-alert-banner" id="hotelAlertBanner">
+              <span class="hab-icon">🏨</span>
+              <div class="hab-text">
+                <strong>Upcoming Zone Alert!</strong>
+                <span>Adverse weather detected. Consider booking a stay.</span>
+              </div>
+            </div>
+            <ul id="hotelList" class="hotel-list"></ul>
+          </div>
+
+          <!-- NASA Events -->
+          <div class="glass-card nasa-card" id="nasaCard">
+            <div class="card-header">
+              <div class="card-icon nasa-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              </div>
+              <span class="card-label">NASA EONET Events</span>
+              <span class="event-count" id="eventCount">0</span>
+            </div>
+            <div class="event-list" id="nasaEventList">
+              <div class="event-placeholder">Fetching satellite data…</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <!-- Hazard Notification Modal -->
+    <div id="hazardModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card warning-glow">
+        <div class="modal-header text-danger">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4m0 4h.01"/></svg>
+          <h3>Severe Route Hazards Detected</h3>
+        </div>
+        <div class="modal-body">
+          <p id="hazardModalSummary">The planned route contains high-risk (red-colored) segments with active threat reports.</p>
+          <div class="hazard-details-list" id="hazardDetailsList">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline" id="btnCancelRoute">Change Destination</button>
+          <button class="btn-danger" id="btnAcceptHazards">Proceed with Shortest Route (Dijkstra)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrival Notification Modal -->
+    <div id="arrivalModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card glass-card success-glow">
+        <div class="modal-header text-success">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+          <h3>Destination Reached!</h3>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+          <p id="arrivalModalSummary" style="font-size: 1.1rem; margin-bottom: 15px;">Welcome! You have safely arrived at your destination:<br><strong id="arrivalPlaceName" style="color: var(--green); font-size: 1.4rem; display: block; margin-top: 8px;">Destination</strong></p>
+          <div class="arrival-stats" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); border: 1px solid var(--glass-border); display: flex; justify-content: space-around;">
+            <div>
+              <span style="color: var(--ink-muted); display: block; font-size: 0.8rem;">TOTAL DISTANCE</span>
+              <strong id="arrivalTotalKm" style="font-size: 1.2rem; color: var(--cyan);">— km</strong>
+            </div>
+            <div>
+              <span style="color: var(--ink-muted); display: block; font-size: 0.8rem;">STATUS</span>
+              <strong style="font-size: 1.2rem; color: var(--green);">ARRIVED</strong>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="primary-button" id="btnDismissArrival" style="width: 100%;">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Intro + Landing Page Logic -->
+    <script>
+      (function() {
+        const intro = document.getElementById('cinematicIntro');
+        const landing = document.getElementById('landingPage');
+        const appShell = document.getElementById('appShell');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const emailInput = document.getElementById('loginEmail');
+        const passwordInput = document.getElementById('loginPassword');
+        const errorDiv = document.getElementById('loginError');
+
+        // Logout handler (must be registered even with active session)
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('ds_session');
+            sessionStorage.removeItem('ds_intro_seen');
+            sessionStorage.removeItem('ds_navigating');
+            window.location.reload();
+          });
+        }
+
+        // Check if there is already an active session
+        const savedSession = localStorage.getItem('ds_session');
+        if (savedSession) {
+          intro.style.display = 'none';
+          landing.style.display = 'none';
+          appShell.style.display = '';
+          appShell.classList.add('visible');
+          return;
+        } else {
+          loadingScreen.style.display = 'none';
+        }
+
+        function dismissIntro() {
+          if (intro.classList.contains('fade-out')) return;
+          intro.classList.add('fade-out');
+          setTimeout(() => {
+            intro.style.display = 'none';
+            landing.style.display = 'flex';
+            requestAnimationFrame(() => {
+              landing.classList.add('visible');
+            });
+          }, 600);
+        }
+
+        // Auto-dismiss after 3.5s
+        const autoTimer = setTimeout(dismissIntro, 3500);
+
+        // Click anywhere or skip
+        intro.addEventListener('click', () => { clearTimeout(autoTimer); dismissIntro(); });
+        const skipBtn = document.getElementById('introSkipBtn');
+        if (skipBtn) {
+          skipBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearTimeout(autoTimer);
+            dismissIntro();
+          });
+        }
+
+        // Login validation
+        function enterDashboard(email, isGuest = false) {
+          const sessionData = {
+            email: isGuest ? 'guest@drivesphere.local' : email,
+            isGuest: isGuest,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('ds_session', JSON.stringify(sessionData));
+          window.location.reload(); // Reload to boot up map and GPS cleanly
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+          const email = emailInput.value.trim();
+          const password = passwordInput.value;
+          if (!email || !email.includes('@')) {
+            errorDiv.textContent = 'Please enter a valid email address.';
+            errorDiv.style.display = 'block';
+            return;
+          }
+          if (!password || password.length < 3) {
+            errorDiv.textContent = 'Please enter your password.';
+            errorDiv.style.display = 'block';
+            return;
+          }
+          errorDiv.style.display = 'none';
+          enterDashboard(email, false);
+        });
+
+        document.getElementById('guestBtn').addEventListener('click', () => {
+          enterDashboard('', true);
+        });
+
+
+      })();
+    </script>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

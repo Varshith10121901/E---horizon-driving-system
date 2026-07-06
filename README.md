@@ -1,19 +1,19 @@
-# E-Horizon Driving System 🚙🌐
-> **An Intelligent, Hazard-Aware, Real-Time Dynamic Route Planning & Driver Assistance System**
+# DriveSphere
+> **Intelligent Driving Dashboard with Hazard-Aware, Real-Time Dynamic Routing & Driver Assistance**
 
 ---
 
-## 📖 Overview
+## Overview
 
-The **E-Horizon Driving System** is a next-generation navigation and safety platform designed to provide drivers with an "Electronic Horizon"—the ability to see hazards, weather conditions, and disasters well beyond their physical line of sight.
+**DriveSphere** is a next-generation navigation and safety platform designed to provide drivers with an "Electronic Horizon"—the ability to see hazards, weather conditions, and disasters well beyond their physical line of sight.
 
-Traditional GPS systems only care about the fastest route. This system constantly evaluates your path against **live news reports, NASA satellite feeds, weather precipitation, road curvature, and vegetation density (NDVI)** to determine the safety of every segment of your journey.
+Traditional GPS systems only care about the fastest route. DriveSphere constantly evaluates your path against **live news reports, NASA satellite feeds, weather precipitation, road curvature, and vegetation density (NDVI)** to determine the safety of every segment of your journey.
 
 If a disaster, landslide risk, or extreme flood is detected ahead, the system dynamically reroutes you using an integrated **Dijkstra's Pathfinding Algorithm** and suggests **emergency hotel shelters** so you can stop driving before entering danger zones.
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 1. **3D Interactive Map Engine (MapLibre GL JS):** Responsive 3D map canvas with automatic terrain adjustments, real-time vehicle simulation, and smooth camera transitions.
 2. **Multi-Source Hazard Ingestion:**
@@ -28,7 +28,7 @@ If a disaster, landslide risk, or extreme flood is detected ahead, the system dy
 
 ---
 
-## 🏗️ High-Level System Architecture
+## High-Level System Architecture
 
 The frontend controls the user experience and maps out routes, while the Node.js backend handles geocoding, API aggregation, and segment risk grading.
 
@@ -63,7 +63,7 @@ flowchart LR
 
 ---
 
-## 🔄 Detailed Workflows
+## Detailed Workflows
 
 ### Phase 1: Route Planning & Dynamic Segmentation
 This phase geocodes destinations, fetches coordinate geometry, queries route cities, and dynamically segments paths.
@@ -155,7 +155,7 @@ flowchart TD
 
 ---
 
-## 🔌 API Reference & Credentials
+## API Reference & Credentials
 
 To run the application, configure your `.env` file or environment variables with the following:
 
@@ -166,7 +166,7 @@ To run the application, configure your `.env` file or environment variables with
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18.x or higher)
@@ -176,7 +176,7 @@ To run the application, configure your `.env` file or environment variables with
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Varshith10121901/E---horizon-driving-system.git
+   git clone https://github.com/Varshith10121901/E---horizon-driving-system
    cd E---horizon-driving-system
    ```
 
@@ -202,6 +202,6 @@ To run the application, configure your `.env` file or environment variables with
 
 ---
 
-## 🛡️ License
+## License
 
 This project is licensed under the MIT License.

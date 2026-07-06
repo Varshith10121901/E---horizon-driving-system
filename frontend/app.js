@@ -18,6 +18,7 @@ let gpsCityName = "";
 let gpsSpeed = 0;
 let gpsWatchId = null;
 let hasAutoFilledGPS = false;
+let hasRealGpsFilled = false;
 let is3DMode = false;
 let isDark = true;
 let vehicleMarker = null;
@@ -141,91 +142,13 @@ function getNDVIDateString() {
 // ═══════════════════════════════════════════════════════════
 // STUNNING THREE.JS MAP PLACEHOLDER GLOBE
 // ═══════════════════════════════════════════════════════════
-function initPlaceholderGlobe() {
-  const canvas = document.getElementById("placeholderGlobeCanvas");
-  if (!canvas) return null;
-
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-  camera.position.z = 15;
-
-  // Globe Mesh (Wireframe Cyberpunk Style)
-  const geometry = new THREE.SphereGeometry(5, 48, 48);
-  const material = new THREE.MeshBasicMaterial({
-    color: 0x00f5d4,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.25
-  });
-  const globe = new THREE.Mesh(geometry, material);
-  scene.add(globe);
-
-  // Outer Atmosphere Aura
-  const glowGeo = new THREE.SphereGeometry(5.2, 24, 24);
-  const glowMat = new THREE.MeshBasicMaterial({
-    color: 0x7b61ff,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.1
-  });
-  const glowMesh = new THREE.Mesh(glowGeo, glowMat);
-  scene.add(glowMesh);
-
-  // Hologram Orbital Particle Ring
-  const ringGeo = new THREE.BufferGeometry();
-  const ringCount = 120;
-  const positions = new Float32Array(ringCount * 3);
-  for (let i = 0; i < ringCount; i++) {
-    const angle = (i / ringCount) * Math.PI * 2;
-    const radius = 6.8 + Math.random() * 0.4;
-    positions[i * 3] = Math.cos(angle) * radius;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 0.3;
-    positions[i * 3 + 2] = Math.sin(angle) * radius;
-  }
-  ringGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const ringMat = new THREE.PointsMaterial({
-    color: 0x00f5d4,
-    size: 0.08,
-    transparent: true,
-    opacity: 0.7
-  });
-  const ring = new THREE.Points(ringGeo, ringMat);
-  scene.add(ring);
-
-  let animId;
-  function animateGlobe() {
-    animId = requestAnimationFrame(animateGlobe);
-    globe.rotation.y += 0.004;
-    globe.rotation.x += 0.001;
-    glowMesh.rotation.y -= 0.002;
-    ring.rotation.y += 0.0015;
-    renderer.render(scene, camera);
-  }
-  animateGlobe();
-
-  const resizeObserver = new ResizeObserver(() => {
-    if (canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
-  });
-  resizeObserver.observe(canvas);
-
+function initPlaceholderAnimation() {
+  // DriveSphere uses CSS animations for the placeholder instead of Three.js
+  const placeholder = document.getElementById('mapPlaceholder');
+  if (!placeholder) return null;
   return {
     destroy: () => {
-      cancelAnimationFrame(animId);
-      resizeObserver.disconnect();
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-      glowGeo.dispose();
-      glowMat.dispose();
-      ringGeo.dispose();
-      ringMat.dispose();
+      // CSS animations clean up automatically
     }
   };
 }
@@ -372,10 +295,10 @@ function startLoading() {
       progress = 100;
       clearInterval(interval);
       setTimeout(() => {
-        ui.loadingScreen.classList.add("hidden");
+        if (ui.loadingScreen) ui.loadingScreen.classList.add("hidden");
       }, 400);
     }
-    ui.loaderFill.style.width = progress + "%";
+    if (ui.loaderFill) ui.loaderFill.style.width = progress + "%";
   }, 120);
 }
 
@@ -1379,17 +1302,28 @@ function initGPS() {
         const res = await fetch(`/api/reverse-geocode?lat=${userPosition.lat}&lon=${userPosition.lng}`);
         if (res.ok) {
           const data = await res.json();
+          const oldGpsCityName = gpsCityName;
           gpsCityName = data.placeName || "My Location";
           
-          if (!hasAutoFilledGPS && currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "My Location" || ui.fromInput.value === "")) {
+          if (currentRouteCoords.length === 0 && 
+              (!ui.fromInput.value || 
+               ui.fromInput.value === "My Location" || 
+               ui.fromInput.value === "" || 
+               ui.fromInput.value === oldGpsCityName || 
+               !hasRealGpsFilled)) {
             ui.fromInput.value = gpsCityName;
+            hasRealGpsFilled = true;
             hasAutoFilledGPS = true;
           }
         }
       } catch (err) {
         console.warn("[GPS reverseGeocode failed]", err.message);
-        if (!hasAutoFilledGPS && currentRouteCoords.length === 0 && (!ui.fromInput.value || ui.fromInput.value === "")) {
+        if (currentRouteCoords.length === 0 && 
+            (!ui.fromInput.value || 
+             ui.fromInput.value === "" || 
+             !hasRealGpsFilled)) {
           ui.fromInput.value = `${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}`;
+          hasRealGpsFilled = true;
           hasAutoFilledGPS = true;
         }
       }
@@ -1994,6 +1928,28 @@ function renderGoogleNews(items) {
 // ═══════════════════════════════════════════════════════════
 async function fetchTripState() {
   try {
+    if (sessionStorage.getItem("ds_navigating") !== "true") {
+      if (currentRouteCoords.length > 0) {
+        currentRouteCoords = [];
+        currentRouteSegments = [];
+        removeRouteLayers();
+        routeMarkers.forEach(m => m.remove());
+        routeMarkers = [];
+        if (vehicleMarker) {
+          vehicleMarker.remove();
+          vehicleMarker = null;
+        }
+      }
+      const response = await fetch(`/api/trip-state?progress=0&routeIndex=0`);
+      if (response.ok) {
+        const state = await response.json();
+        state.route = { totalKm: 0, coveredKm: 0, remainingKm: 0, progress: 0, coordinates: [], elevations: [], segments: [] };
+        state.plan = { from: "", to: "", vehicle: "Car", passengers: 2 };
+        render(state);
+      }
+      return;
+    }
+
     let url = `/api/trip-state?progress=${demoProgress}&routeIndex=${activeRouteIndex}`;
     
     if (currentRouteCoords.length > 0) {
@@ -2068,6 +2024,7 @@ async function submitPlan(event) {
       activeRouteIndex = 0;
       demoStartTime = Date.now();
       demoProgress = 0;
+      sessionStorage.setItem("ds_navigating", "true");
       
       // Reset camera lock on new destination
       isCameraLocked = true;
@@ -2927,13 +2884,34 @@ window.switchActiveRoute = switchActiveRoute;
 // INITIALIZATION
 // ═══════════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", async () => {
+  // Check if there is an active session
+  const savedSession = localStorage.getItem('ds_session');
+  if (!savedSession) {
+    console.log("[DriveSphere] No active session. Initialization deferred until login.");
+    return;
+  }
+
+  // Start loading screen progress animation
   startLoading();
-  
-  // Initialize placeholder spinning 3D globe in parallel
-  globeAnim = initPlaceholderGlobe();
+
+  // Make dashboard shell visible (transition opacity to 1)
+  const appShell = document.getElementById("appShell");
+  if (appShell) appShell.classList.add("visible");
+
+  // Initialize placeholder animation (CSS-based, no Three.js globe)
+  globeAnim = initPlaceholderAnimation();
 
   initMap();
   initGPS();
+
+  // If this session is not currently navigating, clear any residual server-side plan
+  if (sessionStorage.getItem("ds_navigating") !== "true") {
+    fetch("/api/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clear: true })
+    }).catch(err => console.warn("Failed to clear server plan:", err.message));
+  }
 
   ui.planForm.addEventListener("submit", submitPlan);
   const stopTripBtn = $("stopTripBtn");
@@ -2942,13 +2920,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (planAbortController) {
         planAbortController.abort();
       }
+      sessionStorage.removeItem("ds_navigating");
+      removeRouteLayers();
+      routeMarkers.forEach(m => m.remove());
+      routeMarkers = [];
+      if (vehicleMarker) {
+        vehicleMarker.remove();
+        vehicleMarker = null;
+      }
+      // Notify server to clear the plan
+      fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clear: true })
+      }).catch(err => console.warn("Failed to clear server plan:", err.message));
+
       const btn = document.getElementById("startTripBtn");
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Start Navigation`;
       }
       stopTripBtn.style.display = "none";
-      if (ui.loadingScreen) ui.loadingScreen.classList.add("hidden");
     });
   }
   ui.btn3DToggle.addEventListener("click", toggle3D);
@@ -2980,12 +2972,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   ui.currentPlace.style.cursor = "pointer";
   ui.currentPlace.title = "Click to lock camera onto vehicle";
   ui.currentPlace.addEventListener("click", recenterMap);
-
-  // ui.upcomingPlace.style.cursor = "pointer";
-  // ui.upcomingPlace.title = "Click to view upcoming zone on map";
-  // ui.upcomingPlace.addEventListener("click", () => {
-  //   flyToPlace(ui.upcomingPlace.textContent);
-  // });
 
   // Periodic updates
   setInterval(fetchTripState, 4000);

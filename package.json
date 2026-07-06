@@ -1,12 +1,12 @@
 {
-  "name": "e-horizon-travel-mvp",
+  "name": "drivesphere",
   "version": "1.0.0",
   "private": true,
-  "description": "Working MVP for a dynamic e-horizon travel route dashboard.",
+  "description": "DriveSphere — Intelligent, hazard-aware, real-time dynamic route planning dashboard.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --check server.js && node --check public/app.js"
+    "test": "node --check server.js && node --check frontend/app.js"
   },
   "engines": {
     "node": ">=18"

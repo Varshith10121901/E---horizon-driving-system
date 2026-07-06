@@ -464,7 +464,7 @@ runStartupScan();
 
 
 const PORT = Number(process.env.PORT || 3000);
-const PUBLIC_DIR = path.join(__dirname, "public");
+const PUBLIC_DIR = path.join(__dirname, "frontend");
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 const MAP_PROVIDER = "NASA";
 
@@ -651,14 +651,14 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-const headers = { "User-Agent": "E-Horizon-AI-Smart-Travel-Map/1.0" };
+const headers = { "User-Agent": "DriveSphere/1.0" };
 
 async function verifyPlaceWithDDG(name) {
   const cleanName = name.trim();
   const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(cleanName)}&format=json&no_html=1`;
   console.log(`[API Request] DuckDuckGo API verifying place: "${cleanName}"`);
   try {
-    const reqHeaders = { "User-Agent": "E-Horizon-AI-Smart-Travel-Map/1.0" };
+    const reqHeaders = { "User-Agent": "DriveSphere/1.0" };
     if (DDG_API_KEY) {
       reqHeaders["X-API-Key"] = DDG_API_KEY;
     }
@@ -1509,8 +1509,8 @@ async function fetchDuckDuckGoNewsForPlaces(placeNames) {
     
     try {
       const query = `${place} India disaster OR flood OR landslide OR cyclone OR accident`;
-      const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&t=E-Horizon`;
-      const reqHeaders = { "User-Agent": "E-Horizon-AI-Smart-Travel-Map/1.0" };
+      const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&t=DriveSphere`;
+      const reqHeaders = { "User-Agent": "DriveSphere/1.0" };
       if (DDG_API_KEY) reqHeaders["X-API-Key"] = DDG_API_KEY;
       
       const controller = new AbortController();
@@ -2666,6 +2666,19 @@ const server = http.createServer(async (request, response) => {
     try {
       const body = await readBody(request);
       const payload = JSON.parse(body || "{}");
+      
+      if (payload.clear === true) {
+        plan = {
+          from: "",
+          to: "",
+          vehicle: "Car",
+          passengers: 2,
+          updatedAt: new Date().toISOString()
+        };
+        sendJson(response, 200, { ok: true, plan });
+        return;
+      }
+
       const from = String(payload.from || "").slice(0, 40).trim();
       const to = String(payload.to || "").slice(0, 40).trim();
       
