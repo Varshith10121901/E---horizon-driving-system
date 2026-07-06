@@ -33,6 +33,7 @@ let mapStyleIndex = 0; // 0 = Esri Satellite, 1 = GIBS TrueColor, 2 = NDVI, 3 = 
 let isDijkstraRunning = false;
 let isFirstLoad = true;
 let activeRouteIndex = 0;
+let planAbortController = null;
 
 let currentRouteCoords = [];
 let currentRouteSegments = [];
@@ -1641,6 +1642,17 @@ function updateAIDetection(routeIdx) {
 function render(state) {
   tripState = state;
 
+  if (state.vehicle && state.vehicle.currentPlace === "Routing failed") {
+    const btn = document.getElementById("startTripBtn");
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Start Navigation`;
+    }
+    const stopTripBtn = document.getElementById("stopTripBtn");
+    if (stopTripBtn) stopTripBtn.style.display = "none";
+    if (ui.loadingScreen) ui.loadingScreen.classList.add("hidden");
+  }
+
   if (state.route && state.route.coordinates && state.route.coordinates.length > 0) {
     if (ui.bottomHud) ui.bottomHud.style.display = "flex";
   } else {
@@ -2026,6 +2038,9 @@ async function submitPlan(event) {
   btn.disabled = true;
   btn.textContent = "Analyzing...";
 
+  const stopTripBtn = document.getElementById("stopTripBtn");
+  if (stopTripBtn) stopTripBtn.style.display = "flex";
+
   let fromText = fromVal;
   if (!fromText && userPosition) {
     fromText = `${userPosition.lat.toFixed(6)},${userPosition.lng.toFixed(6)}`;
@@ -2033,6 +2048,7 @@ async function submitPlan(event) {
     alert("Please enter a starting location or allow GPS access.");
     btn.disabled = false;
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Start Navigation`;
+    if (stopTripBtn) stopTripBtn.style.display = "none";
     return;
   }
 
@@ -2043,11 +2059,14 @@ async function submitPlan(event) {
     passengers: ui.passengerInput ? Number(ui.passengerInput.value || 1) : 1
   };
 
+  planAbortController = new AbortController();
+
   try {
     const response = await fetch("/api/plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: planAbortController.signal
     });
 
     if (response.ok) {
@@ -2086,11 +2105,17 @@ async function submitPlan(event) {
       }
     }
   } catch (e) {
-    console.error("[Submit Plan Error]", e);
-    alert("Error communicating with route planner: " + e.message);
+    if (e.name === "AbortError") {
+      console.log("[Submit Plan] Request aborted by user.");
+    } else {
+      console.error("[Submit Plan Error]", e);
+      alert("Error communicating with route planner: " + e.message);
+    }
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Start Navigation`;
+    if (stopTripBtn) stopTripBtn.style.display = "none";
+    planAbortController = null;
   }
 }
 
@@ -2916,6 +2941,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   initGPS();
 
   ui.planForm.addEventListener("submit", submitPlan);
+  const stopTripBtn = $("stopTripBtn");
+  if (stopTripBtn) {
+    stopTripBtn.addEventListener("click", () => {
+      if (planAbortController) {
+        planAbortController.abort();
+      }
+      const btn = document.getElementById("startTripBtn");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Start Navigation`;
+      }
+      stopTripBtn.style.display = "none";
+      if (ui.loadingScreen) ui.loadingScreen.classList.add("hidden");
+    });
+  }
   ui.btn3DToggle.addEventListener("click", toggle3D);
   ui.btnRecenter.addEventListener("click", recenterMap);
   ui.btnFullscreen.addEventListener("click", toggleFullscreen);

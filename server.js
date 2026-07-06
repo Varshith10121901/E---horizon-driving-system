@@ -1729,7 +1729,73 @@ async function buildTripStateAsync(searchParams) {
       cached = await getOrBuildRoutes(plan.from, plan.to);
     } catch (err) {
       console.error(`[buildTripStateAsync] Failed to build route:`, err.message);
+      routeCache[cacheKey] = { error: err.message, failed: true, timestamp: Date.now() };
+      cached = routeCache[cacheKey];
     }
+  }
+
+  if (cached && cached.failed) {
+    return {
+      app: "E-Horizon Travel Pro Dashboard",
+      generatedAt: new Date(now).toISOString(),
+      refreshEveryMs: 4000,
+      plan,
+      alternatives: [],
+      route: {
+        totalKm: 0,
+        coveredKm: 0,
+        remainingKm: 0,
+        progress: 0,
+        coordinates: [],
+        elevations: [],
+        segments: []
+      },
+      vehicle: {
+        label: plan.vehicle,
+        currentPlace: "Routing failed",
+        nextPlace: "Routing failed",
+        position: [78.9629, 20.5937],
+        currentSpeed: 0,
+        safeSpeed: 0,
+        speedLimit: 0,
+        segmentProgress: 0
+      },
+      conditions: {
+        current: {
+          place: "Unknown",
+          climate: "Unknown",
+          temperatureC: 0,
+          windKph: 0,
+          humidity: 0,
+          precipMm: 0,
+          severity: "low"
+        },
+        upcoming: {
+          place: "Unknown",
+          climate: "Unknown",
+          temperatureC: 0,
+          risk: "None",
+          color: "#1e9d55"
+        },
+        delayMinutes: 0,
+        routeStatus: "Route inactive"
+      },
+      newsAlerts: [],
+      activeDangerAlerts: [],
+      roadIssuesDetected: false,
+      risk: {
+        score: 0,
+        level: "Low",
+        drivingAdvice: `Route planning failed: ${cached.error}. Please stop searching and try a different location.`
+      },
+      vegetation: {
+        index: 0,
+        density: "Urban Area"
+      },
+      suggestHotels: false,
+      hotels: [],
+      legend: []
+    };
   }
   
   const startPlace = cached ? cached.startPlace : null;
