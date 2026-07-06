@@ -42,9 +42,9 @@ flowchart LR
         Backend -->|Query Route Coords| OSRM[OSRM Routing API]
         Backend -->|Identify Cities| Overpass[Overpass API]
         Backend -->|Fetch Weather| Weather[WeatherAPI]
-        Backend -->|Scan Live News| News[NewsAPI / DuckDuckGo]
+        Backend -->|Scan Live News| News[NewsAPI & SauravTech]
         Backend -->|Track Wildfires/Storms| NASA[NASA EONET API]
-        Backend -->|Query Emergency Stays| Serp[SerpApi Google Hotels]
+        Backend -->|Query Route Hotels| HotelsDB[India Hotels DB]
     end
     
     subgraph Evaluation["Storage & Evaluation"]
@@ -66,12 +66,14 @@ flowchart LR
 ## 🔄 Detailed Workflows
 
 ### Phase 1: Route Planning & Dynamic Segmentation
-This phase converts user input into route coordinates, queries the Overpass API for towns along the route, and slices the route into distinct segments.
+This phase geocodes destinations, fetches coordinate geometry, queries route cities, and dynamically segments paths.
 
 ```mermaid
-flowchart LR
+flowchart TD
     Input[Enter Start & End City] --> Geocode[Geocode API: Resolve Lat/Lon]
-    Geocode --> FetchRoute[OSRM API: Fetch Route Coordinates]
+    Geocode --> CheckCache{Route in Cache?}
+    CheckCache -- Yes --> UseCache[Load Cached Segments]
+    CheckCache -- No --> FetchRoute[OSRM API: Fetch Route Coordinates]
     FetchRoute --> CalculateBbox[Calculate Route Bounding Box]
     CalculateBbox --> FetchCities[Overpass API: Fetch Cities in BBox]
     FetchCities --> SpacingLogic[Filter Cities by Distance spacing]
@@ -80,6 +82,7 @@ flowchart LR
     SegmentSplit -- No --> SplitSegments[Divide Route into Segments]
     SynthWps --> SplitSegments
     SplitSegments --> AssignBoundaries[Set Segment From/To Boundaries]
+    AssignBoundaries --> UseCache
 ```
 
 ---
@@ -88,10 +91,10 @@ flowchart LR
 Every 4 seconds, the backend runs segment coordinates through this logic to determine safety colors.
 
 ```mermaid
-flowchart LR
+flowchart TD
     Segments[For Each Segment] --> FetchData[Trigger Parallel API Fetching]
     FetchData --> FetchWeather[WeatherAPI: Rain mm/hr & Temp]
-    FetchData --> FetchNews[NewsAPI: Query Segment Cities & Disasters]
+    FetchData --> FetchNews[NewsAPI & SauravTech: Scan Disaster Keywords]
     FetchData --> FetchNASA[NASA EONET: Volcanoes, Storms & Wildfires]
     
     FetchWeather --> RiskEval[Risk Assessment Engine]
@@ -115,11 +118,11 @@ flowchart LR
 When a segment is flagged as Red, the driver is warned, local hotels are fetched, and a Dijkstra visualizer computes the safest detour.
 
 ```mermaid
-flowchart LR
+flowchart TD
     ColorGraded[Color-Graded Segments] --> CheckThreat{Upcoming Segment<br>is RED or Danger?}
     
-    CheckThreat -- Yes --> TriggerShelter[Query SerpApi/Overpass: Fetch 5 Hotels]
-    TriggerShelter --> ShowHotels[Display Hotel Recommendation List]
+    CheckThreat -- Yes --> TriggerShelter[findIndiaDBHotelsForRoute: Fetch Route Hotels]
+    TriggerShelter --> ShowHotels[Display Unique Hotels List]
     
     CheckThreat -- Yes --> TriggerDijkstra[Initiate Dijkstra Pathfinding detour]
     TriggerDijkstra --> CalculateDetour[Compute Safest Alternative Path]
@@ -131,10 +134,10 @@ flowchart LR
 ---
 
 ### Phase 4: UI Lifecycle & Map State Syncing
-The frontend handles data synchronization, updating progress metrics and segment colors on the MapLibre canvas dynamically and without flickering.
+The frontend handles data synchronization, updating progress metrics, supporting "Stop Searching" (via AbortController), and repainting segment colors dynamically.
 
 ```mermaid
-flowchart LR
+flowchart TD
     APIResponse[Receive TripState JSON] --> CheckCoords{Coordinates Changed?}
     
     CheckCoords -- Yes --> RedrawRoute[Rebuild Map Sources & GeoJSON Layers]
@@ -160,7 +163,6 @@ To run the application, configure your `.env` file or environment variables with
 | :--- | :--- | :--- |
 | `WEATHER_API_KEY` | [WeatherAPI](https://www.weatherapi.com/) | Live precipitation and weather state checks |
 | `NEWS_API_KEY` | [NewsAPI](https://newsapi.org/) | Scans local news for keywords matching segment cities |
-| `SERP_API_KEY` | [SerpApi](https://serpapi.com/) | Fetches Google Hotels listings during emergency reroutes |
 
 ---
 
@@ -184,11 +186,10 @@ To run the application, configure your `.env` file or environment variables with
    ```
 
 3. **Set Up Keys**
-   Create a `.env` file in the root folder:
+   Create a `.env` file in the root folder (Note: `.env` is ignored by git to keep your keys safe):
    ```env
    WEATHER_API_KEY=your_weather_api_key
    NEWS_API_KEY=your_news_api_key
-   SERP_API_KEY=your_serp_api_key
    ```
 
 4. **Start the Application**
