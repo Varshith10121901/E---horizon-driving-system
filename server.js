@@ -1139,9 +1139,9 @@ function getFallbackNews(from = "", to = "") {
 }
 
 let newsFetchInProgress = false;
-const NEWS_CACHE_TTL = 60000; // 60 seconds global cache
+const NEWS_CACHE_TTL = 20000; // 20 seconds cache TTL
 
-// SauravKanchan NewsAPI integration (Free alternative fetching Indian Top Headlines)
+// Dual-provider News API integration (NewsAPI.org AND SauravTech NewsAPI)
 async function fetchNewsAPI(currentPlace, nextPlace) {
   const now = Date.now();
   
@@ -1156,9 +1156,11 @@ async function fetchNewsAPI(currentPlace, nextPlace) {
 
   newsFetchInProgress = true;
   try {
-    console.log("[News Service] Fetching Indian headlines from SauravTech NewsAPI...");
+    console.log("[News Service] Fetching Indian headlines from SauravTech NewsAPI and NewsAPI.org...");
+    
+    // 1. SauravTech Categories Fetch (Indian Top Headlines)
     const categories = ["general", "business", "technology", "science"];
-    const fetchPromises = categories.map(async (cat) => {
+    const sauravPromises = categories.map(async (cat) => {
       const url = `https://saurav.tech/NewsAPI/top-headlines/category/${cat}/in.json`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -1177,11 +1179,48 @@ async function fetchNewsAPI(currentPlace, nextPlace) {
       }
     });
 
-    const results = await Promise.all(fetchPromises);
+    // 2. NewsAPI.org Fetch (Disaster Specific Query for India)
+    const newsApiKey = process.env.NEWS_API_KEY || "";
+    let newsApiArticles = [];
+    let newsApiPromise = Promise.resolve([]);
+
+    if (newsApiKey) {
+      const query = "(earthquake OR landslide OR flood OR cyclone OR tsunami OR wildfire OR tornado OR hurricane OR \"heavy rain\" OR disaster) AND India";
+      const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&language=en&pageSize=30&apiKey=${newsApiKey}`;
+      
+      newsApiPromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        try {
+          const res = await fetch(newsApiUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const data = await res.json();
+            console.log(`[News Service] Successfully fetched ${data.articles?.length || 0} articles from NewsAPI.org.`);
+            return data.articles || [];
+          } else {
+            const errBody = await res.text().catch(() => "");
+            console.warn(`[News Service] NewsAPI.org returned HTTP ${res.status}: ${errBody.slice(0, 150)}`);
+            return [];
+          }
+        } catch (e) {
+          clearTimeout(timeoutId);
+          console.warn(`[News Service] NewsAPI.org request failed:`, e.message);
+          return [];
+        }
+      })();
+    }
+
+    const [sauravResults, newsApiResults] = await Promise.all([
+      Promise.all(sauravPromises),
+      newsApiPromise
+    ]);
+
     let allArticles = [];
-    results.forEach(articles => {
+    sauravResults.forEach(articles => {
       allArticles = allArticles.concat(articles);
     });
+    allArticles = allArticles.concat(newsApiResults);
 
     // Deduplicate by URL
     const seenUrls = new Set();
@@ -1201,9 +1240,9 @@ async function fetchNewsAPI(currentPlace, nextPlace) {
 
     newsCache = uniqueArticles;
     lastNewsFetch = now;
-    console.log(`[News Service] Successfully loaded and deduplicated ${newsCache.length} articles.`);
+    console.log(`[News Service] Successfully loaded and deduplicated ${newsCache.length} articles from both providers.`);
   } catch (error) {
-    console.warn("[News Service] Failed to fetch SauravTech headlines, using fallback/cache:", error.message);
+    console.warn("[News Service] Failed to fetch live news, using fallback/cache:", error.message);
     if (!newsCache) {
       newsCache = getFallbackNews(currentPlace, nextPlace);
     }
