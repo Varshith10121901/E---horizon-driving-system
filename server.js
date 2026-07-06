@@ -32,6 +32,39 @@ loadEnvFile(ENV_FILE);
 const DDG_API_KEY = process.env.DDG_API_KEY || "";
 const SERPAPI_API_KEY = process.env.SERPAPI_API_KEY || "";
 let disasterZones = [];
+let indiaHotels = [];
+
+async function loadIndiaHotels() {
+  const url = "https://api.kosontechnology.com/india-hotel.php";
+  console.log(`[Hotel Service] Loading India hotels from: ${url}`);
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      indiaHotels = await res.json();
+      console.log(`[Hotel Service] Loaded ${indiaHotels.length} hotels from online database.`);
+    } else {
+      throw new Error(`HTTP status ${res.status}`);
+    }
+  } catch (e) {
+    console.warn(`[Hotel Service] Failed to load online hotels, using empty list:`, e.message);
+  }
+}
+
+// Call on startup
+loadIndiaHotels();
+
+function findHotelsInIndiaDB(placeName) {
+  if (!indiaHotels || indiaHotels.length === 0) return [];
+  const cleanPlace = placeName.toLowerCase().trim();
+  
+  return indiaHotels.filter(h => {
+    const hCity = (h.City || "").toLowerCase().trim();
+    const hAddress = (h.Address || "").toLowerCase().trim();
+    const hName = (h["Hotel Name"] || "").toLowerCase().trim();
+    
+    return hCity === cleanPlace || hCity.includes(cleanPlace) || cleanPlace.includes(hCity) || hAddress.includes(cleanPlace) || hName.includes(cleanPlace);
+  });
+}
 
 function loadDisasterZones() {
   try {
@@ -1999,37 +2032,55 @@ async function buildTripStateAsync(searchParams) {
   // Generate dynamic hotels list based on route places (using Overpass hotels, filter out Spas)
   const cachedHotels = cached ? cached.hotels : [];
   const hotelsForRoute = [];
-  const passengersCount = Number(plan.passengers || 1);
   
   if (activePlaces) {
-    // If upcoming location contains some hazard/disaster zone, prioritize and list at least 5 hotels for that upcoming place!
     if (upcomingIsDangerous) {
       const upcomingPlaceObj = activePlaces[activeIndex + 1] || activePlaces[activeIndex] || endPlace;
       const localHotels = [];
       
-      // 1. Try SerpApi if available
-      if (SERPAPI_API_KEY) {
+      // 1. Search India Hotels DB
+      const dbMatches = findHotelsInIndiaDB(upcomingPlaceObj.name);
+      dbMatches.slice(0, 5).forEach((h, index) => {
+        localHotels.push({
+          name: h["Hotel Name"] || "Local Stay",
+          place: upcomingPlaceObj.name,
+          lat: upcomingPlaceObj.lat + (Math.sin(index) * 0.005),
+          lon: upcomingPlaceObj.lon + (Math.cos(index) * 0.005),
+          etaMin: 25 + index * 6,
+          rooms: h["Total Rooms"] || 10,
+          category: h.Category || "3 Star",
+          address: h.Address || `${upcomingPlaceObj.name}, India`,
+          bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent((h["Hotel Name"] || "") + ", " + upcomingPlaceObj.name)}`,
+          agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent((h["Hotel Name"] || "") + ", " + upcomingPlaceObj.name)}`
+        });
+      });
+      
+      // 2. Try SerpApi if we still need more hotels
+      if (localHotels.length < 5 && SERPAPI_API_KEY) {
         try {
           const serpapiHotels = await fetchSerpapiHotels(upcomingPlaceObj.name, upcomingPlaceObj.lat, upcomingPlaceObj.lon);
           serpapiHotels.forEach(h => {
-            localHotels.push({
-              name: h.name,
-              place: upcomingPlaceObj.name,
-              lat: h.lat,
-              lon: h.lon,
-              etaMin: 35,
-              price: h.price,
-              pricePerPerson: Math.round(h.price / passengersCount),
-              bookingLink: h.bookingLink,
-              agodaLink: h.agodaLink
-            });
+            if (localHotels.length < 5) {
+              localHotels.push({
+                name: h.name,
+                place: upcomingPlaceObj.name,
+                lat: h.lat,
+                lon: h.lon,
+                etaMin: 35,
+                rooms: 20,
+                category: "3 Star",
+                address: h.address || `${upcomingPlaceObj.name}, India`,
+                bookingLink: h.bookingLink,
+                agodaLink: h.agodaLink
+              });
+            }
           });
         } catch (e) {
           console.warn("[SerpApi Hotels] Failed to fetch:", e.message);
         }
       }
       
-      // 2. Try cache
+      // 3. Try cache if we still need more hotels
       if (localHotels.length < 5) {
         const nearHotels = cachedHotels
           ? cachedHotels.filter(h => getDistanceKm(h.lat, h.lon, upcomingPlaceObj.lat, upcomingPlaceObj.lon) < 25)
@@ -2038,19 +2089,18 @@ async function buildTripStateAsync(searchParams) {
           const name = (h.tags.name || "").toLowerCase();
           return !name.includes("spa") && !name.includes("massage");
         });
-        
         cleanHotels.forEach(h => {
           if (localHotels.length < 5) {
             const name = h.tags.name || h.tags.place || "Local Hotel";
-            const hotelPrice = 1600 + Math.round(Math.sin(localHotels.length) * 300);
             localHotels.push({
               name: name,
               place: upcomingPlaceObj.name,
               lat: h.lat,
               lon: h.lon,
               etaMin: 35 + localHotels.length * 5,
-              price: hotelPrice,
-              pricePerPerson: Math.round(hotelPrice / passengersCount),
+              rooms: h.tags.rooms || 15,
+              category: h.tags.stars || "3 Star",
+              address: h.tags["addr:full"] || h.tags["addr:street"] || `${upcomingPlaceObj.name}, India`,
               bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(name + ", " + upcomingPlaceObj.name)}`,
               agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(name + ", " + upcomingPlaceObj.name)}`
             });
@@ -2058,7 +2108,7 @@ async function buildTripStateAsync(searchParams) {
         });
       }
       
-      // 3. Fallbacks to guarantee at least 5 hotels (NO OYO/SPA)
+      // 4. Fallbacks to guarantee at least 5 hotels (NO OYO/SPA)
       const hotelFallbacks = [
         "Gateway Hotel & Suites",
         "Treebo Trend Premium Stay",
@@ -2070,49 +2120,73 @@ async function buildTripStateAsync(searchParams) {
       let fallbackIdx = 0;
       while (localHotels.length < 5 && fallbackIdx < hotelFallbacks.length) {
         const name = `${upcomingPlaceObj.name} ${hotelFallbacks[fallbackIdx]}`;
-        const hotelPrice = 1400 + fallbackIdx * 450;
         localHotels.push({
           name: name,
           place: upcomingPlaceObj.name,
           lat: upcomingPlaceObj.lat + (Math.sin(fallbackIdx) * 0.005),
           lon: upcomingPlaceObj.lon + (Math.cos(fallbackIdx) * 0.005),
           etaMin: 30 + fallbackIdx * 8,
-          price: hotelPrice,
-          pricePerPerson: Math.round(hotelPrice / passengersCount),
+          rooms: 10 + fallbackIdx * 5,
+          category: (3 + (fallbackIdx % 3)) + " Star",
+          address: `${upcomingPlaceObj.name}, India`,
           bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(name + ", " + upcomingPlaceObj.name)}`,
           agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(name + ", " + upcomingPlaceObj.name)}`
         });
         fallbackIdx++;
       }
       
-      // Add all of them to our hotels list
       hotelsForRoute.push(...localHotels);
     } else {
       // Normal hotel listing logic
       const placesToSearch = activePlaces.slice(activeIndex, activeIndex + 3);
       for (let idx = 0; idx < placesToSearch.length; idx++) {
         const p = placesToSearch[idx];
+        const localHotels = [];
         
-        let serpapiHotels = [];
-        if (SERPAPI_API_KEY) {
-          serpapiHotels = await fetchSerpapiHotels(p.name, p.lat, p.lon);
+        // 1. Try India DB first
+        const dbMatches = findHotelsInIndiaDB(p.name);
+        dbMatches.slice(0, 2).forEach((h, index) => {
+          localHotels.push({
+            name: h["Hotel Name"] || "Local Stay",
+            place: p.name,
+            lat: p.lat + (Math.sin(index) * 0.005),
+            lon: p.lon + (Math.cos(index) * 0.005),
+            etaMin: 30 + idx * 45 + index * 5,
+            rooms: h["Total Rooms"] || 10,
+            category: h.Category || "3 Star",
+            address: h.Address || `${p.name}, India`,
+            bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent((h["Hotel Name"] || "") + ", " + p.name)}`,
+            agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent((h["Hotel Name"] || "") + ", " + p.name)}`
+          });
+        });
+        
+        // 2. Try SerpApi
+        if (localHotels.length < 2 && SERPAPI_API_KEY) {
+          try {
+            const serpapiHotels = await fetchSerpapiHotels(p.name, p.lat, p.lon);
+            serpapiHotels.forEach(h => {
+              if (localHotels.length < 2) {
+                localHotels.push({
+                  name: h.name,
+                  place: p.name,
+                  lat: h.lat,
+                  lon: h.lon,
+                  etaMin: 30 + idx * 45,
+                  rooms: 15,
+                  category: "3 Star",
+                  address: h.address || `${p.name}, India`,
+                  bookingLink: h.bookingLink,
+                  agodaLink: h.agodaLink
+                });
+              }
+            });
+          } catch (e) {
+            console.warn("[SerpApi Hotels] Failed to fetch:", e.message);
+          }
         }
         
-        if (serpapiHotels.length > 0) {
-          serpapiHotels.forEach(h => {
-            hotelsForRoute.push({
-              name: h.name,
-              place: h.place,
-              lat: h.lat,
-              lon: h.lon,
-              etaMin: 30 + idx * 45,
-              price: h.price,
-              pricePerPerson: Math.round(h.price / passengersCount),
-              bookingLink: h.bookingLink,
-              agodaLink: h.agodaLink
-            });
-          });
-        } else {
+        // 3. Try Cache
+        if (localHotels.length < 2) {
           const nearHotels = cachedHotels
             ? cachedHotels.filter(h => getDistanceKm(h.lat, h.lon, p.lat, p.lon) < 15)
             : [];
@@ -2120,59 +2194,72 @@ async function buildTripStateAsync(searchParams) {
             const name = (h.tags.name || "").toLowerCase();
             return !name.includes("spa") && !name.includes("massage");
           });
-          
-          if (cleanHotels.length > 0) {
-            cleanHotels.slice(0, 2).forEach(h => {
-              const name = h.tags.name;
-              const hotelPrice = 1500 + Math.round(Math.sin(idx) * 300);
-              hotelsForRoute.push({
-                name: name,
-                place: p.name,
-                lat: h.lat,
-                lon: h.lon,
-                etaMin: 30 + idx * 45,
-                price: hotelPrice,
-                pricePerPerson: Math.round(hotelPrice / passengersCount),
-                bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(name + ", " + p.name)}`,
-                agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(name + ", " + p.name)}`
-              });
+          cleanHotels.slice(0, 2 - localHotels.length).forEach(h => {
+            const name = h.tags.name;
+            localHotels.push({
+              name: name,
+              place: p.name,
+              lat: h.lat,
+              lon: h.lon,
+              etaMin: 30 + idx * 45,
+              rooms: h.tags.rooms || 10,
+              category: h.tags.stars || "3 Star",
+              address: h.tags["addr:full"] || h.tags["addr:street"] || `${p.name}, India`,
+              bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(name + ", " + p.name)}`,
+              agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(name + ", " + p.name)}`
             });
-          } else {
-            // Fallback names (NO SPA/OYO)
-            const fallbacks = [`${p.name} Gateway Hotel`, `Treebo Trend ${p.name} Comfort`, `Sterling ${p.name} Residency`];
-            fallbacks.forEach((name, fIdx) => {
-              const hotelPrice = 1300 + fIdx * 500;
-              hotelsForRoute.push({
-                name,
-                place: p.name,
-                lat: p.lat,
-                lon: p.lon,
-                etaMin: 35 + idx * 45 + fIdx * 10,
-                price: hotelPrice,
-                pricePerPerson: Math.round(hotelPrice / passengersCount),
-                bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(name + ", " + p.name)}`,
-                agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(name + ", " + p.name)}`
-              });
-            });
-          }
+          });
         }
+        
+        // 4. Try Fallback
+        if (localHotels.length < 2) {
+          const fallbacks = [`${p.name} Gateway Hotel`, `Treebo Trend ${p.name} Comfort`];
+          fallbacks.slice(0, 2 - localHotels.length).forEach((name, fIdx) => {
+            localHotels.push({
+              name,
+              place: p.name,
+              lat: p.lat,
+              lon: p.lon,
+              etaMin: 35 + idx * 45 + fIdx * 10,
+              rooms: 12,
+              category: "3 Star",
+              address: `${p.name}, India`,
+              bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(name + ", " + p.name)}`,
+              agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(name + ", " + p.name)}`
+            });
+          });
+        }
+        
+        hotelsForRoute.push(...localHotels);
       }
     }
   }
 
   const hotels = (hotelsForRoute.length > 0 ? hotelsForRoute : hotelPool.map(h => {
-    const hotelPrice = h.price;
     return {
-      ...h,
-      pricePerPerson: Math.round(hotelPrice / passengersCount),
+      name: h.name,
+      place: h.place,
+      lat: h.lat,
+      lon: h.lon,
+      etaMin: h.etaMin,
+      rooms: h.rooms || 10,
+      category: h.category || "Standard",
+      address: h.address || `${h.place}, India`,
       bookingLink: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(h.name + ", " + h.place)}`,
       agodaLink: `https://www.agoda.com/search?query=${encodeURIComponent(h.name + ", " + h.place)}`
     };
   }))
     .map((hotel, index) => ({
-      ...hotel,
+      name: hotel.name,
+      place: hotel.place,
+      lat: hotel.lat,
+      lon: hotel.lon,
       etaMin: hotel.etaMin + activeIndex * 6 + Math.round(Math.sin(elapsedSeconds / (4 + index)) * 4),
-      rooms: 1 + ((elapsedSeconds + index) % 5)
+      rooms: hotel.rooms || (1 + ((elapsedSeconds + index) % 5)),
+      category: hotel.category,
+      address: hotel.address,
+      bookingLink: hotel.bookingLink,
+      agodaLink: hotel.agodaLink
     }))
     .sort((a, b) => a.etaMin - b.etaMin)
     .slice(0, 5);

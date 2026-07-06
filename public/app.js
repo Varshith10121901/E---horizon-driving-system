@@ -1942,8 +1942,8 @@ function renderHotels(hotels) {
         <div style="display: flex; justify-content: space-between; width: 100%; cursor: pointer;" onclick="${clickHandler}" title="Click to view hotel on map">
           <div>
             <strong style="color: var(--neon-cyan);">${escapeHtml(hotel.name)}</strong>
-            <span style="font-size:0.75rem; color:var(--ink-muted); display: block;">${escapeHtml(hotel.place)} · ${hotel.rooms} rooms</span>
-            <span style="display: block; font-size:0.8rem; color:var(--neon-green); margin-top:2px; font-weight: 700;">₹${hotel.pricePerPerson || Math.round(hotel.price)}/person/night</span>
+            <span style="font-size:0.75rem; color:var(--ink-muted); display: block;">${escapeHtml(hotel.place)} · ${hotel.rooms || 0} Rooms · ${escapeHtml(hotel.category || "Standard")}</span>
+            <span style="display: block; font-size:0.7rem; color:var(--ink-muted); opacity: 0.8; margin-top:2px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(hotel.address || '')}">${escapeHtml(hotel.address || '')}</span>
           </div>
           <em style="color: var(--neon-purple); font-style: normal; font-weight: 700; font-size: 0.8rem;">${hotel.etaMin} min</em>
         </div>
