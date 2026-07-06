@@ -1732,6 +1732,9 @@ async function buildTripStateAsync(searchParams) {
     }
   }
   
+  const startPlace = cached ? cached.startPlace : null;
+  const endPlace = cached ? cached.endPlace : null;
+  
   let activeSegments = [];
   let activeCoords = [];
   let activeElevations = null;
