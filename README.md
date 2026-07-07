@@ -202,6 +202,59 @@ To run the application, configure your `.env` file or environment variables with
 
 ---
 
+## Verification & Testing
+
+DriveSphere contains a fully automated integration test suite to verify server endpoints, routing logic, geocoding cache fallbacks, and threat telemetry.
+
+### Running the Tests
+To verify the application locally, run:
+```bash
+npm test
+```
+
+### Latest Test Suite Execution Report
+```text
+> drivesphere@1.0.0 test
+> node --check server.js && node --check frontend/app.js && node test_runner.js
+
+Starting test server on port 3001...
+
+Running: GET /api/map-config - Fetch map keys and styles
+   Map provider found: NASA
+✅ Passed: GET /api/map-config - Fetch map keys and styles
+
+Running: GET /api/nasa-events - Fetch active disasters (Wildfires/Storms)
+   NASA EONET: Loaded 47 active event pins.
+✅ Passed: GET /api/nasa-events - Fetch active disasters (Wildfires/Storms)
+
+Running: GET /api/reverse-geocode - Resolve place name from coordinate
+   Resolved location: Hubballi Urban Taluku, Hubballi
+✅ Passed: GET /api/reverse-geocode - Resolve place name from coordinate
+
+Running: POST /api/plan & GET /api/trip-state - Set and fetch active navigation route
+   Created Route: Generated 17 segment splits.
+✅ Passed: POST /api/plan & GET /api/trip-state - Set and fetch active navigation route
+
+Running: POST /api/plan (clear) - Clear active navigation plan
+   Plan memory cleared successfully.
+✅ Passed: POST /api/plan (clear) - Clear active navigation plan
+
+======================================
+          TEST RESULTS REPORT         
+======================================
+1. [PASSED] GET /api/map-config - Fetch map keys and styles
+2. [PASSED] GET /api/nasa-events - Fetch active disasters (Wildfires/Storms)
+3. [PASSED] GET /api/reverse-geocode - Resolve place name from coordinate
+4. [PASSED] POST /api/plan & GET /api/trip-state - Set and fetch active navigation route
+5. [PASSED] POST /api/plan (clear) - Clear active navigation plan
+--------------------------------------
+Summary: 5/5 tests passed.
+======================================
+Stopping test server...
+```
+
+---
+
 ## License
 
 This project is licensed under the MIT License.
