@@ -1,5 +1,5 @@
 # DriveSphere
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 > **Intelligent Driving Dashboard with Hazard-Aware, Real-Time Dynamic Routing & Driver Assistance**
 
 ---
