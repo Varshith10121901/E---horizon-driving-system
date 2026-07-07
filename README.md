@@ -1,4 +1,5 @@
 # DriveSphere
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 > **Intelligent Driving Dashboard with Hazard-Aware, Real-Time Dynamic Routing & Driver Assistance**
 
 ---
@@ -204,4 +205,4 @@ To run the application, configure your `.env` file or environment variables with
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](./LICENSE).
