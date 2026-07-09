@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveSphere - E-Horizon Driving Intelligence</title>
+  <meta name="description" content="Access the DriveSphere E-Horizon vehicular telemetry and AI navigation dashboard.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%231f6feb%22/><text x=%2250%22 y=%2265%22 font-size=%2245%22 font-family=%22sans-serif%22 font-weight=%22bold%22 fill=%22white%22 text-anchor=%22middle%22>D</text></svg>">
+  
+  <!-- CDNs for lightweight single file execution -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#58A6FF',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Premium hardware-accelerated animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-fade-in-left {
+      animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-fade-in-right {
+      animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-pulse-soft {
+      animation: pulseSoft 2s infinite ease-in-out;
+    }
+    body {
+      overflow-x: hidden;
+      overflow-y: auto;
+      margin: 0;
+      padding: 0;
+    }
+    /* Clean custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(120, 120, 120, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(120, 120, 120, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-black text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ==========================================
+    // STANDALONE SVG COMPONENTS (Identical to Lucide)
+    // ==========================================
+    const SunIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+      </svg>
+    );
+
+    const MoonIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    );
+
+    const CpuIcon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <rect x="4" y="4" width="16" height="16" rx="2"/>
+        <path d="M9 9h6v6H9zm0-5V2m6 2V2M9 22v-2m6 2v-2M2 9h2m-2 6h2m18-6h-2m2 6h-2"/>
+      </svg>
+    );
+
+    const MailIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+      </svg>
+    );
+
+    const LockIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    );
+
+    const KeyIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778Zm0 0L15.5 7.5m0 0 1.5 1.5M15.5 7.5 14 6"/>
+      </svg>
+    );
+
+    const ArrowRightIcon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    );
+
+    const NavigationIcon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+      </svg>
+    );
+
+    const ShieldAlertIcon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v4m0 4h.01"/>
+      </svg>
+    );
+
+    const CloudRainIcon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M16 13a4 4 0 0 0-8 0M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/>
+        <path d="M8 19v2M12 21v2M16 19v2"/>
+      </svg>
+    );
+
+    const AlertTriangleIcon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    );
+
+    const CheckCircle2Icon = ({ className }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+    );
+
+    const EyeIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    );
+
+    const EyeOffIcon = () => (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20"/>
+      </svg>
+    );
+
+    // ==========================================
+    // MAIN APP COMPONENT
+    // ==========================================
+    function App() {
+      const [theme, setTheme] = useState("dark");
+      const [introFinished, setIntroFinished] = useState(
+        () => sessionStorage.getItem("drivesphere_intro_seen") === "true"
+      );
+      const [showPassword, setShowPassword] = useState(false);
+      const [email, setEmail] = useState("");
+      const [password, setPassword] = useState("");
+      const [isFocused, setIsFocused] = useState({});
+      const [isLoading, setIsLoading] = useState(false);
+
+      const [authMode, setAuthMode] = useState("login");
+      const [operatorName, setOperatorName] = useState("");
+      const [confirmPassword, setConfirmPassword] = useState("");
+      const [otpCode, setOtpCode] = useState("");
+      const [errorMsg, setErrorMsg] = useState("");
+      const [successMsg, setSuccessMsg] = useState("");
+
+      const introCanvasRef = useRef(null);
+      const bgCanvasRef = useRef(null);
+
+      const toggleTheme = () => {
+        setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+      };
+
+      // 1. Cinematic Intro Canvas Animation
+      useEffect(() => {
+        if (introFinished) return;
+        const canvas = introCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        let animationFrameId;
+        let startTime = null;
+        const duration = 5000;
+
+        const resize = () => {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        };
+        resize();
+        window.addEventListener("resize", resize);
+
+        const particles = Array.from({ length: 60 }, () => ({
+          x: Math.random() * canvas.width,
+          y: canvas.height * 0.55 + Math.random() * (canvas.height * 0.45),
+          speed: 15 + Math.random() * 25,
+          length: 20 + Math.random() * 60,
+          alpha: Math.random() * 0.6,
+        }));
+
+        const render = (timestamp) => {
+          if (!startTime) startTime = timestamp;
+          const progress = (timestamp - startTime) / duration;
+
+          if (progress >= 1) {
+            sessionStorage.setItem("drivesphere_intro_seen", "true");
+            setIntroFinished(true);
+            return;
+          }
+
+          ctx.fillStyle = theme === "dark" ? "#000000" : "#111111";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Perspective Grid
+          ctx.strokeStyle = "rgba(88, 166, 255, 0.15)";
+          ctx.lineWidth = 1;
+          const horizonY = canvas.height * 0.55;
+          const centerX = canvas.width / 2;
+
+          for (let i = -10; i <= 10; i++) {
+            ctx.beginPath();
+            ctx.moveTo(centerX, horizonY);
+            ctx.lineTo(centerX + i * 150, canvas.height);
+            ctx.stroke();
+          }
+
+          const offset = (timestamp * 0.2) % 40;
+          for (let y = horizonY; y < canvas.height; y += 40) {
+            const gridY = y + offset;
+            if (gridY > canvas.height) continue;
+            const alpha = (gridY - horizonY) / (canvas.height - horizonY);
+            ctx.strokeStyle = `rgba(88, 166, 255, ${alpha * 0.3})`;
+            ctx.beginPath();
+            ctx.moveTo(0, gridY);
+            ctx.lineTo(canvas.width, gridY);
+            ctx.stroke();
+          }
+
+          // Particles
+          particles.forEach((p) => {
+            p.x -= p.speed;
+            if (p.x < 0) {
+              p.x = canvas.width + 100;
+              p.y = horizonY + Math.random() * (canvas.height - horizonY);
+            }
+            ctx.strokeStyle = `rgba(88, 166, 255, ${p.alpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + p.length, p.y);
+            ctx.stroke();
+          });
+
+          // Car 3D perspective drawing
+          const carProgress = Math.min(1, progress / 0.40);
+          const scale = 0.03 + Math.pow(carProgress, 4.5) * 80.0;
+          const s = scale;
+          const centerY = canvas.height / 2;
+          const carX = centerX;
+          const grilleCenterY = horizonY + Math.pow(carProgress, 2.5) * (centerY - horizonY);
+          const carY = grilleCenterY + 8.5 * s;
+
+          const drawHeadlightGlow = (hx, hy) => {
+            if (s < 0.1) return;
+            const glowRad = 55 * s;
+            const radGrad = ctx.createRadialGradient(hx, hy, 1 * s, hx, hy, glowRad);
+            radGrad.addColorStop(0, "rgba(88, 166, 255, 0.4)");
+            radGrad.addColorStop(0.2, "rgba(88, 166, 255, 0.12)");
+            radGrad.addColorStop(1, "rgba(88, 166, 255, 0)");
+            ctx.fillStyle = radGrad;
+            ctx.beginPath();
+            ctx.arc(hx, hy, glowRad, 0, Math.PI * 2);
+            ctx.fill();
+          };
+
+          if (carProgress < 0.98) {
+            drawHeadlightGlow(carX - 29 * s, carY - 12 * s);
+            drawHeadlightGlow(carX + 29 * s, carY - 12 * s);
+          }
+
+          // Car shadow
+          ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+          ctx.beginPath();
+          ctx.ellipse(carX, carY, 48 * s, 8 * s, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Car body outline
+          ctx.fillStyle = theme === "dark" ? "#040404" : "#E6EDF0";
+          ctx.strokeStyle = "#58A6FF";
+          ctx.lineWidth = Math.max(1, 1.8 * s);
+          ctx.shadowColor = "#58A6FF";
+          ctx.shadowBlur = Math.min(20, 4 * s);
+
+          ctx.beginPath();
+          ctx.moveTo(carX - 44 * s, carY);
+          ctx.lineTo(carX - 44 * s, carY - 10 * s);
+          ctx.quadraticCurveTo(carX - 45 * s, carY - 15 * s, carX - 38 * s, carY - 14 * s);
+          ctx.quadraticCurveTo(carX - 46 * s, carY - 18 * s, carX - 34 * s, carY - 18 * s);
+          ctx.lineTo(carX - 22 * s, carY - 17 * s);
+          ctx.lineTo(carX - 20 * s, carY - 19 * s);
+          ctx.quadraticCurveTo(carX - 16 * s, carY - 30 * s, carX - 12 * s, carY - 31 * s);
+          ctx.lineTo(carX + 12 * s, carY - 31 * s);
+          ctx.quadraticCurveTo(carX + 16 * s, carY - 30 * s, carX + 20 * s, carY - 19 * s);
+          ctx.lineTo(carX + 22 * s, carY - 17 * s);
+          ctx.lineTo(carX + 34 * s, carY - 18 * s);
+          ctx.quadraticCurveTo(carX + 46 * s, carY - 18 * s, carX + 38 * s, carY - 14 * s);
+          ctx.quadraticCurveTo(carX + 45 * s, carY - 15 * s, carX + 44 * s, carY - 10 * s);
+          ctx.lineTo(carX + 44 * s, carY);
+          ctx.lineTo(carX - 44 * s, carY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Windshield
+          ctx.fillStyle = theme === "dark" ? "rgba(88, 166, 255, 0.25)" : "rgba(31, 111, 235, 0.2)";
+          ctx.beginPath();
+          ctx.moveTo(carX - 18 * s, carY - 18 * s);
+          ctx.quadraticCurveTo(carX - 14 * s, carY - 29 * s, carX - 10 * s, carY - 29 * s);
+          ctx.lineTo(carX + 10 * s, carY - 29 * s);
+          ctx.quadraticCurveTo(carX + 14 * s, carY - 29 * s, carX + 18 * s, carY - 18 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Windshield Glare
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+          ctx.lineWidth = Math.max(0.5, 1 * s);
+          ctx.beginPath();
+          ctx.moveTo(carX - 12 * s, carY - 27 * s);
+          ctx.lineTo(carX + 2 * s, carY - 19 * s);
+          ctx.moveTo(carX - 8 * s, carY - 28 * s);
+          ctx.lineTo(carX + 6 * s, carY - 20 * s);
+          ctx.stroke();
+
+          // Mirrors
+          ctx.fillStyle = theme === "dark" ? "#020202" : "#FFFFFF";
+          ctx.strokeStyle = "#58A6FF";
+          ctx.lineWidth = Math.max(1, 1.5 * s);
+          // Left
+          ctx.beginPath();
+          ctx.moveTo(carX - 20 * s, carY - 19 * s);
+          ctx.lineTo(carX - 30 * s, s > 0.5 ? carY - 20.5 * s : carY - 20 * s);
+          ctx.quadraticCurveTo(carX - 33 * s, carY - 23 * s, carX - 28 * s, carY - 22 * s);
+          ctx.lineTo(carX - 20 * s, carY - 20 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Right
+          ctx.beginPath();
+          ctx.moveTo(carX + 20 * s, carY - 19 * s);
+          ctx.lineTo(carX + 30 * s, s > 0.5 ? carY - 20.5 * s : carY - 20 * s);
+          ctx.quadraticCurveTo(carX + 33 * s, carY - 23 * s, carX + 28 * s, carY - 22 * s);
+          ctx.lineTo(carX + 20 * s, carY - 20 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Hood details
+          ctx.strokeStyle = "rgba(88, 166, 255, 0.6)";
+          ctx.lineWidth = Math.max(0.5, 1.2 * s);
+          ctx.beginPath();
+          ctx.moveTo(carX - 10 * s, carY - 17 * s);
+          ctx.lineTo(carX - 6 * s, carY - 23 * s);
+          ctx.moveTo(carX + 10 * s, carY - 17 * s);
+          ctx.lineTo(carX + 6 * s, carY - 23 * s);
+          ctx.stroke();
+
+          // Grille (Shield)
+          ctx.fillStyle = "#020202";
+          ctx.strokeStyle = "#58A6FF";
+          ctx.lineWidth = Math.max(1, 1.8 * s);
+          ctx.beginPath();
+          ctx.moveTo(carX - 18 * s, carY - 15 * s);
+          ctx.lineTo(carX + 18 * s, carY - 15 * s);
+          ctx.lineTo(carX + 22 * s, carY - 9 * s);
+          ctx.lineTo(carX + 15 * s, carY - 2 * s);
+          ctx.lineTo(carX - 15 * s, carY - 2 * s);
+          ctx.lineTo(carX - 22 * s, carY - 9 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Honeycomb Mesh inside Grille
+          ctx.strokeStyle = "rgba(88, 166, 255, 0.22)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          for (let yOffset = 3; yOffset <= 14; yOffset += 1.5) {
+            let wAtY = yOffset < 9 ? (18 + (9 - yOffset) * 0.6) : (15 + (yOffset - 2) * 0.7);
+            ctx.moveTo(carX - wAtY * s, carY - yOffset * s);
+            ctx.lineTo(carX + wAtY * s, carY - yOffset * s);
+          }
+          for (let xOffset = -18; xOffset <= 18; xOffset += 4) {
+            ctx.moveTo(carX + xOffset * s, carY - 2 * s);
+            ctx.lineTo(carX + xOffset * 0.8 * s, carY - 15 * s);
+          }
+          ctx.stroke();
+
+          // Air Ducts
+          ctx.fillStyle = "#030303";
+          ctx.strokeStyle = "#58A6FF";
+          ctx.lineWidth = Math.max(1, 1.5 * s);
+          // Left
+          ctx.beginPath();
+          ctx.moveTo(carX - 40 * s, carY - 3 * s);
+          ctx.lineTo(carX - 22 * s, carY - 3 * s);
+          ctx.lineTo(carX - 20 * s, carY - 9 * s);
+          ctx.lineTo(carX - 35 * s, carY - 10 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Right
+          ctx.beginPath();
+          ctx.moveTo(carX + 40 * s, carY - 3 * s);
+          ctx.lineTo(carX + 22 * s, carY - 3 * s);
+          ctx.lineTo(carX + 20 * s, carY - 9 * s);
+          ctx.lineTo(carX + 35 * s, carY - 10 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Headlights housing & lasers
+          ctx.fillStyle = "#0a0a0a";
+          ctx.strokeStyle = "#58A6FF";
+          ctx.lineWidth = Math.max(1, 1.5 * s);
+          // Left
+          ctx.beginPath();
+          ctx.moveTo(carX - 38 * s, carY - 14 * s);
+          ctx.lineTo(carX - 20 * s, carY - 11 * s);
+          ctx.lineTo(carX - 22 * s, carY - 13 * s);
+          ctx.lineTo(carX - 35 * s, carY - 15 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Right
+          ctx.beginPath();
+          ctx.moveTo(carX + 38 * s, carY - 14 * s);
+          ctx.lineTo(carX + 20 * s, carY - 11 * s);
+          ctx.lineTo(carX + 22 * s, carY - 13 * s);
+          ctx.lineTo(carX + 35 * s, carY - 15 * s);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Laser strips
+          ctx.fillStyle = "#FFFFFF";
+          // Left
+          ctx.beginPath();
+          ctx.arc(carX - 33 * s, carY - 13.5 * s, Math.max(0.5, 1.2 * s), 0, Math.PI * 2);
+          ctx.arc(carX - 29 * s, carY - 12.5 * s, Math.max(0.5, 1.2 * s), 0, Math.PI * 2);
+          ctx.arc(carX - 25 * s, carY - 11.5 * s, Math.max(0.5, 1.2 * s), 0, Math.PI * 2);
+          ctx.fill();
+          // Right
+          ctx.beginPath();
+          ctx.arc(carX + 33 * s, carY - 13.5 * s, Math.max(0.5, 1.2 * s), 0, Math.PI * 2);
+          ctx.arc(carX + 29 * s, carY - 12.5 * s, Math.max(0.5, 1.2 * s), 0, Math.PI * 2);
+          ctx.arc(carX + 25 * s, carY - 11.5 * s, Math.max(0.5, 1.2 * s), 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.shadowBlur = 0;
+          animationFrameId = requestAnimationFrame(render);
+        };
+
+        animationFrameId = requestAnimationFrame(render);
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+          window.removeEventListener("resize", resize);
+        };
+      }, [introFinished, theme]);
+
+      // 2. Background wireframe network nodes
+      useEffect(() => {
+        if (!introFinished) return;
+        const canvas = bgCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        let animationFrameId;
+        let angle = 0;
+
+        const resize = () => {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        };
+        resize();
+        window.addEventListener("resize", resize);
+
+        const nodes = Array.from({ length: 25 }, () => ({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+        }));
+
+        const render = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const isDark = theme === "dark";
+          const lineColor = isDark ? "rgba(88, 166, 255, 0.08)" : "rgba(31, 111, 235, 0.06)";
+          const nodeColor = isDark ? "rgba(88, 166, 255, 0.25)" : "rgba(31, 111, 235, 0.2)";
+
+          angle += 0.005;
+          const centerX = canvas.width * 0.25;
+          const centerY = canvas.height * 0.5;
+
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = 1;
+          for (let r = 100; r < 800; r += 100) {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, r + Math.sin(angle) * 10, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          nodes.forEach((node, i) => {
+            node.x += node.vx;
+            node.y += node.vy;
+
+            if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
+            if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
+
+            ctx.fillStyle = nodeColor;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (let j = i + 1; j < nodes.length; j++) {
+              const dx = nodes[j].x - node.x;
+              const dy = nodes[j].y - node.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist < 200) {
+                ctx.strokeStyle = isDark 
+                  ? `rgba(88, 166, 255, ${0.1 * (1 - dist / 200)})` 
+                  : `rgba(31, 111, 235, ${0.08 * (1 - dist / 200)})`;
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(nodes[j].x, nodes[j].y);
+                ctx.stroke();
+              }
+            }
+          });
+
+          animationFrameId = requestAnimationFrame(render);
+        };
+
+        animationFrameId = requestAnimationFrame(render);
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+          window.removeEventListener("resize", resize);
+        };
+      }, [introFinished, theme]);
+
+      // Safe JSON Request Client
+      const safeFetchJson = async (url, options) => {
+        try {
+          const response = await fetch(url, options);
+          const text = await response.text();
+          let data = {};
+          try {
+            data = text ? JSON.parse(text) : {};
+          } catch (e) {
+            throw new Error(`Server returned invalid response format (${response.status}).`);
+          }
+          if (!response.ok) {
+            throw { status: response.status, message: data.error || "Request failed." };
+          }
+          return data;
+        } catch (err) {
+          if (err.status) throw err;
+          throw new Error(err.message || "Unable to contact verification server. Ensure the backend is active.");
+        }
+      };
+
+      // Submit Form Handler
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setErrorMsg("");
+        setSuccessMsg("");
+
+        try {
+          if (authMode === "register") {
+            if (!operatorName || !email || !password || !confirmPassword) {
+              setErrorMsg("All fields are required.");
+              setIsLoading(false);
+              return;
+            }
+            if (password !== confirmPassword) {
+              setErrorMsg("Passwords do not match.");
+              setIsLoading(false);
+              return;
+            }
+            const checkPasswordStrength = (pass) => {
+              if (pass.length < 8) return "Password must be at least 8 characters long.";
+              if (!/[A-Z]/.test(pass)) return "Password must contain at least one uppercase letter.";
+              if (!/[a-z]/.test(pass)) return "Password must contain at least one lowercase letter.";
+              if (!/[0-9]/.test(pass)) return "Password must contain at least one number.";
+              if (!/[!@#$%^&*()_+\-=\[\]\{\}|;:',.<>\/?]/.test(pass)) return "Password must contain at least one special character (!@#$%^&* etc.).";
+              return null;
+            };
+            const strengthError = checkPasswordStrength(password);
+            if (strengthError) {
+              setErrorMsg(strengthError);
+              setIsLoading(false);
+              return;
+            }
+
+            const data = await safeFetchJson("/api/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: operatorName, email, password }),
+            });
+
+            if (data.requiresVerification) {
+              setSuccessMsg(data.message || "Operator profile initiated. Enter verification code.");
+              setAuthMode("otp");
+            } else {
+              setSuccessMsg("Operator account created! Switch to sign-in...");
+              setTimeout(() => {
+                setAuthMode("login");
+                setSuccessMsg("");
+                setPassword("");
+              }, 2500);
+            }
+          } else if (authMode === "login") {
+            if (!email || !password) {
+              setErrorMsg("Email and password are required.");
+              setIsLoading(false);
+              return;
+            }
+
+            try {
+              const data = await safeFetchJson("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+              });
+
+              if (data.token) {
+                localStorage.setItem("drivesphere_token", data.token);
+                localStorage.setItem("drivesphere_operator", JSON.stringify(data.operator));
+              }
+
+              setSuccessMsg("Authentication Successful. Initializing DriveSphere E-Horizon...");
+              setTimeout(() => {
+                setIsLoading(false);
+                const redirectUrl = `http://localhost:3000/?token=${encodeURIComponent(data.token)}&operator=${encodeURIComponent(JSON.stringify(data.operator))}`;
+                window.location.href = redirectUrl;
+                setSuccessMsg("");
+              }, 1500);
+            } catch (error) {
+              if (error.status === 403) {
+                setErrorMsg(error.message);
+                setAuthMode("otp");
+                setIsLoading(false);
+                return;
+              }
+              throw error;
+            }
+          } else if (authMode === "otp") {
+            if (!otpCode) {
+              setErrorMsg("Please enter the 6-digit verification code.");
+              setIsLoading(false);
+              return;
+            }
+
+            const data = await safeFetchJson("/api/verify-otp", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, otp: otpCode }),
+            });
+
+            setSuccessMsg(data.message || "Account successfully verified! Authorization granted.");
+            setOtpCode("");
+            setTimeout(() => {
+              setAuthMode("login");
+              setSuccessMsg("");
+              setPassword("");
+            }, 2000);
+          } else if (authMode === "forgot") {
+            if (!email) {
+              setErrorMsg("Email address is required.");
+              setIsLoading(false);
+              return;
+            }
+
+            const data = await safeFetchJson("/api/forgot-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+
+            setSuccessMsg(data.message || "A reset code has been sent to your email.");
+            setTimeout(() => {
+              setAuthMode("reset_otp");
+              setSuccessMsg("");
+              setOtpCode("");
+              setPassword("");
+              setConfirmPassword("");
+            }, 2000);
+          } else if (authMode === "reset_otp") {
+            if (!otpCode || !password || !confirmPassword) {
+              setErrorMsg("All fields are required.");
+              setIsLoading(false);
+              return;
+            }
+            if (password !== confirmPassword) {
+              setErrorMsg("Passwords do not match.");
+              setIsLoading(false);
+              return;
+            }
+
+            const data = await safeFetchJson("/api/reset-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, otp: otpCode, password }),
+            });
+
+            setSuccessMsg(data.message || "Password successfully updated! You can now log in.");
+            setOtpCode("");
+            setTimeout(() => {
+              setAuthMode("login");
+              setSuccessMsg("");
+              setPassword("");
+              setConfirmPassword("");
+            }, 2500);
+          }
+        } catch (error) {
+          setErrorMsg(error.message || "An unexpected network error occurred.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      // Resend OTP code
+      const handleResendOtp = async () => {
+        setIsLoading(true);
+        setErrorMsg("");
+        setSuccessMsg("");
+        try {
+          const endpoint = authMode === "reset_otp" ? "/api/forgot-password" : "/api/resend-otp";
+          const data = await safeFetchJson(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          setSuccessMsg(data.message || "New verification code sent!");
+        } catch (error) {
+          setErrorMsg(error.message || "Could not resend verification code.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      // Google OAuth Link (Mock)
+      const handleGoogleLogin = async () => {
+        setIsLoading(true);
+        setErrorMsg("");
+        setSuccessMsg("");
+
+        if (!email) {
+          setErrorMsg("Please enter your email address first to simulate Google Sign-in.");
+          setIsLoading(false);
+          return;
+        }
+
+        try {
+          const data = await safeFetchJson("/api/oauth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: email.trim().toLowerCase(),
+              name: operatorName.trim() || "Auraai Operator",
+              picture: ""
+            }),
+          });
+
+          if (data.token) {
+            localStorage.setItem("drivesphere_token", data.token);
+            localStorage.setItem("drivesphere_operator", JSON.stringify(data.operator));
+          }
+
+          setSuccessMsg("Google OAuth Verified. Initializing E-Horizon...");
+          setTimeout(() => {
+            setIsLoading(false);
+            const redirectUrl = `http://localhost:3000/?token=${encodeURIComponent(data.token)}&operator=${encodeURIComponent(JSON.stringify(data.operator))}`;
+            window.location.href = redirectUrl;
+            setSuccessMsg("");
+          }, 1500);
+        } catch (error) {
+          setErrorMsg(error.message || "An unexpected OAuth error occurred.");
+          setIsLoading(false);
+        }
+      };
+
+      return (
+        <div className={`min-h-screen w-full relative overflow-x-hidden font-sans select-none transition-colors duration-500 ${
+          theme === "dark" ? "bg-black text-[#FFFFFF]" : "bg-[#F7F8FA] text-[#111111]"
+        }`}>
+          
+          {/* STAGE 1: INTRO CAR OVERLAY */}
+          {!introFinished && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black transition-opacity duration-1000">
+              <canvas ref={introCanvasRef} className="absolute inset-0 w-full h-full" />
+              <div className="z-10 text-center pointer-events-none tracking-widest uppercase">
+                <p className="text-xs text-[#58A6FF] font-semibold mb-2 animate-pulse-soft">E-Horizon System</p>
+                <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">DRIVESPHERE</h1>
+              </div>
+            </div>
+          )}
+
+          {/* STAGE 2: OS APPLICATION UI */}
+          {introFinished && (
+            <div className="animate-fade-in">
+              <canvas ref={bgCanvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0 opacity-75" />
+
+              {/* Theme Toggle */}
+              <div className="absolute top-6 right-6 z-40">
+                <button
+                  onClick={toggleTheme}
+                  aria-label="Toggle Theme"
+                  className={`p-3 rounded-full border backdrop-blur-md transition-all duration-300 shadow-lg hover:scale-105 active:scale-95 ${
+                    theme === "dark" 
+                      ? "bg-black/60 border-white/10 text-[#58A6FF] shadow-black/5" 
+                      : "bg-white/80 border-black/10 text-[#1F6FEB] shadow-black/5"
+                  }`}
+                >
+                  {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                </button>
+              </div>
+
+              {/* Main Split Layout */}
+              <div className="relative z-10 flex flex-col lg:flex-row min-h-screen w-full">
+                
+                {/* Left Side: System Telemetry Specs */}
+                <div className="w-full lg:w-[55%] xl:w-[50%] p-8 md:p-14 lg:p-16 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-gray-500/10 animate-fade-in-left">
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shadow-md ${
+                        theme === "dark" ? "bg-[#58A6FF] text-black" : "bg-[#1F6FEB] text-white"
+                      }`}>
+                        DS
+                      </div>
+                      <span className="font-semibold tracking-wide text-sm uppercase opacity-75">
+                        E-Horizon OS v4.2
+                      </span>
+                    </div>
+
+                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
+                      DriveSphere
+                    </h1>
+                    <p className={`text-lg md:text-xl font-medium tracking-wide mb-6 ${
+                      theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                    }`}>
+                      Electronic Horizon Driving Intelligence
+                    </p>
+                    <p className={`text-sm md:text-base leading-relaxed max-w-xl mb-10 ${
+                      theme === "dark" ? "text-[#8B949E]" : "text-gray-600"
+                    }`}>
+                      DriveSphere revolutionizes vehicular safety by synthesizing AI-powered hazard prediction, live disaster monitoring, and real-time weather telemetry. By mapping the road ahead beyond the driver's line of sight, the Electronic Horizon engine autonomously computes dynamic rerouting and proactive decision support.
+                    </p>
+                  </div>
+
+                  {/* Tech Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-auto">
+                    <FeatureCard 
+                      theme={theme}
+                      icon={<NavigationIcon className={theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"} />}
+                      title="AI Navigation Engine"
+                      description="Predictive routing algorithms that adapt in real-time to road topology and traffic flow."
+                    />
+                    <FeatureCard 
+                      theme={theme}
+                      icon={<ShieldAlertIcon className={theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"} />}
+                      title="Hazard & Disaster Telemetry"
+                      description="Instant vehicular alerts for accidents, floods, and structural hazards beyond line-of-sight."
+                    />
+                    <FeatureCard 
+                      theme={theme}
+                      icon={<CloudRainIcon className={theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"} />}
+                      title="Live Weather Intelligence"
+                      description="Hyper-local microclimate tracking to proactively adjust braking and traction protocols."
+                    />
+                    <FeatureCard 
+                      theme={theme}
+                      icon={<CpuIcon className={theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"} />}
+                      title="Real-Time Decision Support"
+                      description="Sub-millisecond data processing assisting ADAS systems for safer, autonomous lane management."
+                    />
+                  </div>
+
+                  {/* Satellite Status Footer */}
+                  <div className="mt-12 flex items-center justify-between text-xs font-mono opacity-60 border-t border-gray-500/10 pt-6">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>SYSTEM ONLINE // SATELLITE LOCK ACQUIRED</span>
+                    </div>
+                    <span>LAT: 15.3647° N | LON: 75.1240° E</span>
+                  </div>
+                </div>
+
+                {/* Right Side: Forms */}
+                <div className="w-full lg:w-[45%] xl:w-[50%] flex items-center justify-center p-8 md:p-14 lg:p-16 relative animate-fade-in-right">
+                  <div className={`w-full max-w-md p-8 md:p-10 rounded-3xl border backdrop-blur-xl transition-all duration-300 shadow-2xl ${
+                    theme === "dark"
+                      ? "bg-black/60 border-white/10 shadow-black/50"
+                      : "bg-white/70 border-white/80 shadow-xl shadow-blue-500/5"
+                  }`}>
+                    
+                    <div className="text-center mb-6">
+                      <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+                        {authMode === "login" 
+                          ? "Welcome Back" 
+                          : authMode === "register" 
+                          ? "Operator Registration" 
+                          : authMode === "forgot"
+                          ? "Reset Password"
+                          : authMode === "reset_otp"
+                          ? "Enter Reset OTP"
+                          : "Verify OTP Code"}
+                      </h2>
+                      <p className={`text-xs md:text-sm ${theme === "dark" ? "text-[#8B949E]" : "text-gray-500"}`}>
+                        {authMode === "login" 
+                          ? "Access your E-Horizon driver telemetry dashboard" 
+                          : authMode === "register"
+                          ? "Provision a new operator profile in the E-Horizon fleet"
+                          : authMode === "forgot"
+                          ? "Request a password reset verification code"
+                          : authMode === "reset_otp"
+                          ? "Enter the reset code and choose a new password"
+                          : "Verify the 6-digit access code sent to your email"}
+                      </p>
+                    </div>
+
+                    {/* Alerts */}
+                    {errorMsg && (
+                      <div className="p-3 mb-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 text-xs flex items-center gap-2">
+                        <AlertTriangleIcon className="shrink-0 w-4 h-4" />
+                        <span>{errorMsg}</span>
+                      </div>
+                    )}
+                    {successMsg && (
+                      <div className="p-3 mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 text-xs flex items-center gap-2">
+                        <CheckCircle2Icon className="shrink-0 w-4 h-4" />
+                        <span>{successMsg}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                      
+                      {/* Name (Register) */}
+                      {authMode === "register" && (
+                        <div className="relative">
+                          <div className={`absolute left-4 top-3.5 transition-colors duration-200 pointer-events-none ${
+                            isFocused.operatorName || operatorName ? (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]") : "opacity-40"
+                          }`}>
+                            <CpuIcon className="w-5 h-5" />
+                          </div>
+                          <input
+                            type="text"
+                            id="operatorName"
+                            value={operatorName}
+                            onChange={(e) => setOperatorName(e.target.value)}
+                            onFocus={() => setIsFocused({ ...isFocused, operatorName: true })}
+                            onBlur={() => setIsFocused({ ...isFocused, operatorName: false })}
+                            required
+                            className={`w-full pt-6 pb-2 pl-12 pr-4 rounded-xl text-sm font-medium transition-all duration-200 outline-none border bg-transparent ${
+                              theme === "dark"
+                                ? "border-white/25 focus:border-[#58A6FF] focus:bg-black/80 text-white placeholder-transparent"
+                                : "border-gray-200 focus:border-[#1F6FEB] focus:bg-white text-gray-900 placeholder-transparent"
+                            }`}
+                            placeholder="Operator Name"
+                          />
+                          <label
+                            htmlFor="operatorName"
+                            className={`absolute left-12 transition-all duration-200 pointer-events-none ${
+                              isFocused.operatorName || operatorName
+                                ? "top-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-80 " + (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]")
+                                : "top-3.5 text-sm opacity-50"
+                            }`}
+                          >
+                            Operator Name
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Email (Hidden in OTP and Reset OTP mode) */}
+                      {authMode !== "otp" && authMode !== "reset_otp" && (
+                        <div className="relative">
+                          <div className={`absolute left-4 top-3.5 transition-colors duration-200 pointer-events-none ${
+                            isFocused.email || email ? (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]") : "opacity-40"
+                          }`}>
+                            <MailIcon />
+                          </div>
+                          <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            onFocus={() => setIsFocused({ ...isFocused, email: true })}
+                            onBlur={() => setIsFocused({ ...isFocused, email: false })}
+                            required
+                            className={`w-full pt-6 pb-2 pl-12 pr-4 rounded-xl text-sm font-medium transition-all duration-200 outline-none border bg-transparent ${
+                              theme === "dark"
+                                ? "border-white/25 focus:border-[#58A6FF] focus:bg-black/80 text-white placeholder-transparent"
+                                : "border-gray-200 focus:border-[#1F6FEB] focus:bg-white text-gray-900 placeholder-transparent"
+                            }`}
+                            placeholder="Email Address"
+                          />
+                          <label
+                            htmlFor="email"
+                            className={`absolute left-12 transition-all duration-200 pointer-events-none ${
+                              isFocused.email || email
+                                ? "top-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-80 " + (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]")
+                                : "top-3.5 text-sm opacity-50"
+                            }`}
+                          >
+                            Email Address
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Password (Hidden in OTP, Forgot, and Register (via logic elsewhere) mode) */}
+                      {(authMode === "login" || authMode === "register" || authMode === "reset_otp") && (
+                        <div className="relative">
+                          <div className={`absolute left-4 top-3.5 transition-colors duration-200 pointer-events-none ${
+                            isFocused.password || password ? (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]") : "opacity-40"
+                          }`}>
+                            <LockIcon />
+                          </div>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            id="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setIsFocused({ ...isFocused, password: true })}
+                            onBlur={() => setIsFocused({ ...isFocused, password: false })}
+                            required
+                            className={`w-full pt-6 pb-2 pl-12 pr-12 rounded-xl text-sm font-medium transition-all duration-200 outline-none border bg-transparent ${
+                              theme === "dark"
+                                ? "border-white/25 focus:border-[#58A6FF] focus:bg-black/80 text-white placeholder-transparent"
+                                : "border-gray-200 focus:border-[#1F6FEB] focus:bg-white text-gray-900 placeholder-transparent"
+                            }`}
+                            placeholder={authMode === "reset_otp" ? "New Password" : "Password"}
+                          />
+                          <label
+                            htmlFor="password"
+                            className={`absolute left-12 transition-all duration-200 pointer-events-none ${
+                              isFocused.password || password
+                                ? "top-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-80 " + (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]")
+                                : "top-3.5 text-sm opacity-50"
+                            }`}
+                          >
+                            {authMode === "reset_otp" ? "New Password" : "Password"}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-3.5 opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
+                          >
+                            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Confirm Password (Register and Reset OTP) */}
+                      {(authMode === "register" || authMode === "reset_otp") && (
+                        <div className="relative">
+                          <div className={`absolute left-4 top-3.5 transition-colors duration-200 pointer-events-none ${
+                            isFocused.confirmPassword || confirmPassword ? (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]") : "opacity-40"
+                          }`}>
+                            <LockIcon />
+                          </div>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            id="confirmPassword"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onFocus={() => setIsFocused({ ...isFocused, confirmPassword: true })}
+                            onBlur={() => setIsFocused({ ...isFocused, confirmPassword: false })}
+                            required
+                            className={`w-full pt-6 pb-2 pl-12 pr-12 rounded-xl text-sm font-medium transition-all duration-200 outline-none border bg-transparent ${
+                              theme === "dark"
+                                ? "border-white/25 focus:border-[#58A6FF] focus:bg-black/80 text-white placeholder-transparent"
+                                : "border-gray-200 focus:border-[#1F6FEB] focus:bg-white text-gray-900 placeholder-transparent"
+                            }`}
+                            placeholder={authMode === "reset_otp" ? "Confirm New Password" : "Confirm Password"}
+                          />
+                          <label
+                            htmlFor="confirmPassword"
+                            className={`absolute left-12 transition-all duration-200 pointer-events-none ${
+                              isFocused.confirmPassword || confirmPassword
+                                ? "top-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-80 " + (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]")
+                                : "top-3.5 text-sm opacity-50"
+                            }`}
+                          >
+                            {authMode === "reset_otp" ? "Confirm New Password" : "Confirm Password"}
+                          </label>
+                        </div>
+                      )}
+
+                      {/* OTP code input */}
+                      {(authMode === "otp" || authMode === "reset_otp") && (
+                        <div className="relative">
+                          <div className={`absolute left-4 top-3.5 transition-colors duration-200 pointer-events-none ${
+                            isFocused.otpCode || otpCode ? (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]") : "opacity-40"
+                          }`}>
+                            <KeyIcon />
+                          </div>
+                          <input
+                            type="text"
+                            id="otpCode"
+                            maxLength="6"
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                            onFocus={() => setIsFocused({ ...isFocused, otpCode: true })}
+                            onBlur={() => setIsFocused({ ...isFocused, otpCode: false })}
+                            required
+                            className={`w-full pt-6 pb-2 pl-12 pr-4 rounded-xl text-sm font-medium transition-all duration-200 outline-none border bg-transparent ${
+                              theme === "dark"
+                                ? "border-white/25 focus:border-[#58A6FF] focus:bg-black/80 text-white placeholder-transparent"
+                                : "border-gray-200 focus:border-[#1F6FEB] focus:bg-white text-gray-900 placeholder-transparent"
+                            }`}
+                            placeholder="Verification Code"
+                          />
+                          <label
+                            htmlFor="otpCode"
+                            className={`absolute left-12 transition-all duration-200 pointer-events-none ${
+                              isFocused.otpCode || otpCode
+                                ? "top-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-80 " + (theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]")
+                                : "top-3.5 text-sm opacity-50"
+                            }`}
+                          >
+                            Verification Code (OTP)
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Remember Telemetry session checkbox */}
+                      {authMode === "login" && (
+                        <div className="flex items-center justify-between text-xs">
+                          <label className="flex items-center gap-2 cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity">
+                            <input 
+                              type="checkbox" 
+                              className={`rounded border-gray-400 text-[#1F6FEB] focus:ring-0 w-3.5 h-3.5 ${
+                                theme === "dark" ? "bg-white/5 border-white/20" : "bg-black/5 border-black/20"
+                              }`}
+                            />
+                            <span>Remember telemetry session</span>
+                          </label>
+                          <a 
+                            href="#forgot" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setAuthMode("forgot");
+                              setErrorMsg("");
+                              setSuccessMsg("");
+                            }}
+                            className={`font-semibold hover:underline transition-all ${
+                              theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                            }`}
+                          >
+                            Forgot Password?
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Resend OTP button */}
+                      {(authMode === "otp" || authMode === "reset_otp") && (
+                        <div className="flex justify-end text-xs my-2">
+                          <button
+                            type="button"
+                            onClick={handleResendOtp}
+                            disabled={isLoading}
+                            className={`font-semibold hover:underline bg-transparent border-none cursor-pointer p-0 ${
+                              theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                            }`}
+                          >
+                            Resend Code
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Submit */}
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-300 relative overflow-hidden group hover:scale-[1.01] active:scale-[0.99] ${
+                          theme === "dark"
+                            ? "bg-[#58A6FF] text-black hover:bg-[#79c0ff] shadow-[#58A6FF]/20"
+                            : "bg-[#1F6FEB] text-white hover:bg-[#1a5cc7] shadow-[#1F6FEB]/25"
+                        }`}
+                      >
+                        {isLoading ? (
+                          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span>
+                              {authMode === "login" 
+                                ? "Initialize System" 
+                                : authMode === "register" 
+                                ? "Register Operator" 
+                                : authMode === "forgot"
+                                ? "Send Reset Code"
+                                : authMode === "reset_otp"
+                                ? "Reset Password"
+                                : "Verify Account"}
+                            </span>
+                            <ArrowRightIcon className="group-hover:translate-x-1 transition-transform w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </form>
+
+                    {/* Connect With Google */}
+                    <div className="relative my-6 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className={`w-full border-t ${theme === "dark" ? "border-white/10" : "border-gray-200"}`}></div>
+                      </div>
+                      <span className={`relative px-3 text-[10px] uppercase tracking-widest font-semibold backdrop-blur-md ${
+                        theme === "dark" ? "bg-black text-[#8B949E]" : "bg-white text-gray-400"
+                      }`}>
+                        Or Connect With
+                      </span>
+                    </div>
+
+                    <div className="w-full">
+                      <button 
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                          theme === "dark"
+                            ? "border-white/10 bg-white/5 hover:bg-white/10 text-white"
+                            : "border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24">
+                          <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                        </svg>
+                        <span>Connect with Google</span>
+                      </button>
+                    </div>
+
+                    {/* Footer toggles */}
+                    <p className={`mt-6 text-center text-xs ${theme === "dark" ? "text-[#8B949E]" : "text-gray-500"}`}>
+                      {authMode === "otp" ? (
+                        <>
+                          Wrong email address?{" "}
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setAuthMode("register");
+                              setErrorMsg("");
+                              setSuccessMsg("");
+                            }}
+                            className={`font-semibold hover:underline bg-transparent border-none cursor-pointer p-0 ${
+                              theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                            }`}
+                          >
+                            Change Registration
+                          </button>
+                          {" or "}
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setAuthMode("login");
+                              setErrorMsg("");
+                              setSuccessMsg("");
+                            }}
+                            className={`font-semibold hover:underline bg-transparent border-none cursor-pointer p-0 ${
+                              theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                            }`}
+                          >
+                            Back to Login
+                          </button>
+                        </>
+                      ) : authMode === "login" ? (
+                        <>
+                          Need fleet authorization?{" "}
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setAuthMode("register");
+                              setErrorMsg("");
+                              setSuccessMsg("");
+                            }}
+                            className={`font-semibold hover:underline bg-transparent border-none cursor-pointer p-0 ${
+                              theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                            }`}
+                          >
+                            Request Operator Account
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          Already registered?{" "}
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setAuthMode("login");
+                              setErrorMsg("");
+                              setSuccessMsg("");
+                            }}
+                            className={`font-semibold hover:underline bg-transparent border-none cursor-pointer p-0 ${
+                              theme === "dark" ? "text-[#58A6FF]" : "text-[#1F6FEB]"
+                            }`}
+                          >
+                            Back to Login
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Helper FeatureCard
+    function FeatureCard({ icon, title, description, theme }) {
+      return (
+        <div className={`p-5 rounded-2xl border transition-all duration-300 backdrop-blur-sm group hover:scale-[1.02] ${
+          theme === "dark"
+            ? "bg-black/40 border-white/5 hover:border-white/15 hover:bg-black/80"
+            : "bg-white/60 border-gray-200/80 hover:border-blue-500/30 hover:bg-white shadow-sm"
+        }`}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`p-2.5 rounded-xl transition-transform duration-300 group-hover:scale-110 ${
+              theme === "dark" ? "bg-white/5" : "bg-blue-50"
+            }`}>
+              {icon}
+            </div>
+            <h3 className="font-bold text-sm tracking-tight">{title}</h3>
+          </div>
+          <p className={`text-xs leading-relaxed ${
+            theme === "dark" ? "text-[#8B949E]" : "text-gray-600"
+          }`}>
+            {description}
+          </p>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

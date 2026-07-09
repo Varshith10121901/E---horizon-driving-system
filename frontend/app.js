@@ -2885,6 +2885,50 @@ window.switchActiveRoute = switchActiveRoute;
 // ═══════════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", async () => {
 
+  // ─── Authentication & Session Verification ───
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramToken = urlParams.get("token");
+  const paramOperator = urlParams.get("operator");
+
+  if (paramToken && paramOperator) {
+    localStorage.setItem("drivesphere_token", paramToken);
+    localStorage.setItem("drivesphere_operator", paramOperator);
+    // Clean up the URL query params so they don't clutter the address bar
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  const token = localStorage.getItem("drivesphere_token");
+  const operatorStr = localStorage.getItem("drivesphere_operator");
+
+  if (!token || !operatorStr) {
+    // Redirect to login page on port 5000
+    window.location.href = "http://localhost:5000/";
+    return;
+  }
+
+  // Parse and display operator info
+  try {
+    const operator = JSON.parse(operatorStr);
+    if (operator && operator.name) {
+      const opNameText = document.getElementById("operatorNameText");
+      const opStatus = document.getElementById("operatorStatus");
+      if (opNameText) opNameText.textContent = `Operator: ${operator.name}`;
+      if (opStatus) opStatus.style.display = "inline-flex";
+    }
+  } catch (e) {
+    console.warn("Failed to parse operator info:", e);
+  }
+
+  // Bind logout action
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("drivesphere_token");
+      localStorage.removeItem("drivesphere_operator");
+      window.location.href = "http://localhost:5000/";
+    });
+  }
 
   // Start loading screen progress animation
   startLoading();

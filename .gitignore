@@ -11,3 +11,6 @@ backup_current/
 .vscode/
 .DS_Store
 disaster_notifications.json
+__pycache__/
+*.pyc
+

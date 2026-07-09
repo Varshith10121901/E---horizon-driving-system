@@ -154,12 +154,22 @@
             </svg>
             <span class="status-text">GPS Pending</span>
           </div>
+          <div class="status-pill operator-pill" id="operatorStatus" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="status-text" id="operatorNameText">Operator: Unknown</span>
+          </div>
           <button class="icon-btn" id="toggleTheme" title="Toggle dark mode" aria-label="Toggle dark mode">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
             </svg>
           </button>
-
+          <button class="icon-btn" id="logoutBtn" title="Sign out" aria-label="Sign out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+          </button>
         </div>
       </header>
 
