@@ -480,3 +480,18 @@ def reset_password():
     return jsonify({
         "message": "Password successfully updated! You can now log in.",
     })
+
+
+# ──────────────────────────────────────
+# GET /api/config
+# ──────────────────────────────────────
+@api_bp.route("/api/config", methods=["GET"])
+def get_config():
+    """
+    Expose public config parameters (e.g. dashboard redirection URL) to the frontend client.
+    """
+    import os
+    dashboard_url = os.environ.get("DASHBOARD_URL", "")
+    return jsonify({
+        "dashboard_url": dashboard_url,
+    })

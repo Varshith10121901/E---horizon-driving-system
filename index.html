@@ -200,6 +200,19 @@
       const [otpCode, setOtpCode] = useState("");
       const [errorMsg, setErrorMsg] = useState("");
       const [successMsg, setSuccessMsg] = useState("");
+      const [config, setConfig] = useState({ dashboardUrl: "" });
+
+      useEffect(() => {
+        safeFetchJson("/api/config")
+          .then(data => {
+            if (data && data.dashboard_url) {
+              setConfig({ dashboardUrl: data.dashboard_url });
+            }
+          })
+          .catch(err => {
+            console.warn("Could not fetch dashboard configuration:", err);
+          });
+      }, []);
 
       const introCanvasRef = useRef(null);
       const bgCanvasRef = useRef(null);
@@ -682,7 +695,8 @@
               setSuccessMsg("Authentication Successful. Initializing DriveSphere E-Horizon...");
               setTimeout(() => {
                 setIsLoading(false);
-                const redirectUrl = `http://localhost:3000/?token=${encodeURIComponent(data.token)}&operator=${encodeURIComponent(JSON.stringify(data.operator))}`;
+                const baseUrl = config.dashboardUrl || `${window.location.protocol}//${window.location.hostname}:3000`;
+                const redirectUrl = `${baseUrl.replace(/\/$/, "")}/?token=${encodeURIComponent(data.token)}&operator=${encodeURIComponent(JSON.stringify(data.operator))}`;
                 window.location.href = redirectUrl;
                 setSuccessMsg("");
               }, 1500);
@@ -821,7 +835,8 @@
           setSuccessMsg("Google OAuth Verified. Initializing E-Horizon...");
           setTimeout(() => {
             setIsLoading(false);
-            const redirectUrl = `http://localhost:3000/?token=${encodeURIComponent(data.token)}&operator=${encodeURIComponent(JSON.stringify(data.operator))}`;
+            const baseUrl = config.dashboardUrl || `${window.location.protocol}//${window.location.hostname}:3000`;
+            const redirectUrl = `${baseUrl.replace(/\/$/, "")}/?token=${encodeURIComponent(data.token)}&operator=${encodeURIComponent(JSON.stringify(data.operator))}`;
             window.location.href = redirectUrl;
             setSuccessMsg("");
           }, 1500);

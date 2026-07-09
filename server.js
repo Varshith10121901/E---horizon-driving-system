@@ -467,6 +467,7 @@ const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.join(__dirname, "frontend");
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 const MAP_PROVIDER = "NASA";
+const AUTH_URL = process.env.AUTH_URL || "";
 
 let demoStart = Date.now();
 let plan = {
@@ -2610,7 +2611,15 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/api/map-config" && request.method === "GET") {
     sendJson(response, 200, {
       provider: MAP_PROVIDER,
-      nasaApiKey: NASA_API_KEY
+      nasaApiKey: NASA_API_KEY,
+      authUrl: AUTH_URL
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/config" && request.method === "GET") {
+    sendJson(response, 200, {
+      authUrl: AUTH_URL
     });
     return;
   }

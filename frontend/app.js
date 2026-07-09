@@ -2901,9 +2901,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("drivesphere_token");
   const operatorStr = localStorage.getItem("drivesphere_operator");
 
+  const redirectToLogin = async () => {
+    try {
+      const res = await fetch("/api/config");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.authUrl) {
+          window.location.href = data.authUrl.endsWith("/") ? data.authUrl : data.authUrl + "/";
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch authUrl config, falling back to dynamic port 5000:", e);
+    }
+    // Fallback: same host, port 5000
+    window.location.href = `${window.location.protocol}//${window.location.hostname}:5000/`;
+  };
+
   if (!token || !operatorStr) {
-    // Redirect to login page on port 5000
-    window.location.href = "http://localhost:5000/";
+    redirectToLogin();
     return;
   }
 
@@ -2926,7 +2942,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("drivesphere_token");
       localStorage.removeItem("drivesphere_operator");
-      window.location.href = "http://localhost:5000/";
+      redirectToLogin();
     });
   }
 
