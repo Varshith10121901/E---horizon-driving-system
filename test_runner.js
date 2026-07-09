@@ -147,8 +147,62 @@ async function runTests() {
   }
 }
 
+async function runUnitTests() {
+  console.log('\n======================================');
+  console.log('         RUNNING UNIT TESTS           ');
+  console.log('======================================');
+
+  const { clamp, getDistanceKm, parseCSV, getSpeedLimitForNdvi, estimateNdviForPoints, estimateSegmentType } = require('./server.js');
+
+  // Test clamp
+  console.log('Testing clamp()...');
+  assert.strictEqual(clamp(5, 1, 10), 5, 'clamp mid range');
+  assert.strictEqual(clamp(0, 1, 10), 1, 'clamp below min');
+  assert.strictEqual(clamp(15, 1, 10), 10, 'clamp above max');
+  console.log('✅ clamp() passed.');
+
+  // Test getDistanceKm
+  console.log('Testing getDistanceKm()...');
+  const d = getDistanceKm(15.3647, 75.1240, 14.9643, 74.7121);
+  assert.ok(d > 60 && d < 70, `Distance should be roughly 64.7km (got ${d}km)`);
+  console.log('✅ getDistanceKm() passed.');
+
+  // Test parseCSV
+  console.log('Testing parseCSV()...');
+  const parsed = parseCSV('col1,col2\nval1,val2\n"val3,with,commas",val4');
+  assert.strictEqual(parsed.length, 3, 'parsed rows count');
+  assert.strictEqual(parsed[2][0], 'val3,with,commas', 'parsed quoted commas');
+  console.log('✅ parseCSV() passed.');
+
+  // Test getSpeedLimitForNdvi
+  console.log('Testing getSpeedLimitForNdvi()...');
+  assert.strictEqual(getSpeedLimitForNdvi(0.75), 40, 'Dense forest limit');
+  assert.strictEqual(getSpeedLimitForNdvi(0.65), 60, 'Moderate vegetation limit');
+  assert.strictEqual(getSpeedLimitForNdvi(0.3), 80, 'Default highway limit');
+  console.log('✅ getSpeedLimitForNdvi() passed.');
+
+  // Test estimateNdviForPoints
+  console.log('Testing estimateNdviForPoints()...');
+  const ndviVal = estimateNdviForPoints([[75.1240, 15.3647]]);
+  assert.ok(ndviVal >= 0.0 && ndviVal <= 1.0, 'NDVI must be bounded in [0, 1]');
+  console.log('✅ estimateNdviForPoints() passed.');
+
+  // Test estimateSegmentType
+  console.log('Testing estimateSegmentType()...');
+  const typeForest = estimateSegmentType(0.7, [[75.1240, 15.3647]]);
+  assert.ok(typeof typeForest === 'string', 'Segment type should be a string');
+  console.log('✅ estimateSegmentType() passed.');
+
+  console.log('\n✅ All Unit Tests Passed successfully!');
+  console.log('======================================\n');
+}
+
 async function main() {
   try {
+    // Run isolated unit tests first (no server process needed)
+    await runUnitTests();
+
+    // Run HTTP API integration tests second (spawns test server process)
     await startServer();
     await runTests();
   } catch (err) {

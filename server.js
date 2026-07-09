@@ -2722,7 +2722,18 @@ const server = http.createServer(async (request, response) => {
   sendStatic(response, filePath);
 });
 
-server.listen(PORT, () => {
-  console.log(`E-Horizon Travel Pro Dashboard running at http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`E-Horizon Travel Pro Dashboard running at http://localhost:${PORT}`);
+  });
+} else {
+  module.exports = {
+    clamp,
+    getDistanceKm,
+    parseCSV,
+    getSpeedLimitForNdvi,
+    estimateNdviForPoints,
+    estimateSegmentType
+  };
+}
 
