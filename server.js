@@ -1636,8 +1636,41 @@ function getSegmentColor(segment, weatherCurrent, weatherUpcoming, activeDangerA
 
   return "#10b981"; // Safe green
 }
-
 const reverseGeoCache = {};
+
+function getReverseGeocodeProximityFallback(lat, lon) {
+  const latFixed = parseFloat(lat).toFixed(3);
+  const lonFixed = parseFloat(lon).toFixed(3);
+  const cacheKey = `${latFixed},${lonFixed}`;
+
+  let closestCity = "Route Checkpoint";
+  let minDistance = Infinity;
+  if (indiaHotels && indiaHotels.length > 0) {
+    for (const h of indiaHotels) {
+      if (h.Latitude && h.Longitude) {
+        const hLat = parseFloat(h.Latitude);
+        const hLon = parseFloat(h.Longitude);
+        if (!isNaN(hLat) && !isNaN(hLon)) {
+          const dist = getDistanceKm(parseFloat(lat), parseFloat(lon), hLat, hLon);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestCity = h.City || closestCity;
+          }
+        }
+      }
+    }
+  }
+  
+  if (minDistance < 60 && closestCity !== "Route Checkpoint") {
+    const fallbackName = `${closestCity} Area`;
+    console.log(`[Reverse Geocode Fallback] Resolved GPS [${lonFixed}, ${latFixed}] using India Hotels DB proximity to: "${fallbackName}" (Distance: ${minDistance.toFixed(1)} km)`);
+    reverseGeoCache[cacheKey] = fallbackName;
+    return fallbackName;
+  }
+  
+  return null;
+}
+
 async function reverseGeocode(lat, lon) {
   const latFixed = parseFloat(lat).toFixed(3);
   const lonFixed = parseFloat(lon).toFixed(3);
@@ -1656,10 +1689,15 @@ async function reverseGeocode(lat, lon) {
     console.log(`[API Response] Nominatim Reverse Geocode status: ${res.status} ${res.statusText}`);
     
     if (res.status === 429) {
-      throw new Error("Rate limited (429)");
+      console.warn(`[Reverse Geocode Rate Limited] 429 from Nominatim for [${lonFixed}, ${latFixed}]. Using local proximity database fallback.`);
+      return getReverseGeocodeProximityFallback(lat, lon);
     }
     
-    if (!res.ok) throw new Error("Reverse geocode failed");
+    if (!res.ok) {
+      console.warn(`[Reverse Geocode HTTP Error] ${res.status} for [${lonFixed}, ${latFixed}]. Using local proximity database fallback.`);
+      return getReverseGeocodeProximityFallback(lat, lon);
+    }
+
     const data = await res.json();
     const address = data.address || {};
     
@@ -1678,37 +1716,9 @@ async function reverseGeocode(lat, lon) {
     return placeName;
   } catch (err) {
     console.warn(`[Reverse Geocode Failed] ${lat}, ${lon}:`, err.message);
-    
-    // Proximity fallback using local India Hotels DB to bypass rate limits gracefully
-    let closestCity = "Route Checkpoint";
-    let minDistance = Infinity;
-    if (indiaHotels && indiaHotels.length > 0) {
-      for (const h of indiaHotels) {
-        if (h.Latitude && h.Longitude) {
-          const hLat = parseFloat(h.Latitude);
-          const hLon = parseFloat(h.Longitude);
-          if (!isNaN(hLat) && !isNaN(hLon)) {
-            const dist = getDistanceKm(parseFloat(lat), parseFloat(lon), hLat, hLon);
-            if (dist < minDistance) {
-              minDistance = dist;
-              closestCity = h.City || closestCity;
-            }
-          }
-        }
-      }
-    }
-    
-    if (minDistance < 60 && closestCity !== "Route Checkpoint") {
-      const fallbackName = `${closestCity} Area`;
-      console.log(`[Reverse Geocode Fallback] Resolved GPS [${lonFixed}, ${latFixed}] using India Hotels DB proximity to: "${fallbackName}" (Distance: ${minDistance.toFixed(1)} km)`);
-      reverseGeoCache[cacheKey] = fallbackName;
-      return fallbackName;
-    }
-    
-    return null;
+    return getReverseGeocodeProximityFallback(lat, lon);
   }
 }
-
 async function buildTripStateAsync(searchParams) {
   const now = Date.now();
   const demoDurationMs = 180_000;

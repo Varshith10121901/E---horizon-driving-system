@@ -2884,12 +2884,7 @@ window.switchActiveRoute = switchActiveRoute;
 // INITIALIZATION
 // ═══════════════════════════════════════════════════════════
 document.addEventListener("DOMContentLoaded", async () => {
-  // Check if there is an active session
-  const savedSession = localStorage.getItem('ds_session');
-  if (!savedSession) {
-    console.log("[DriveSphere] No active session. Initialization deferred until login.");
-    return;
-  }
+
 
   // Start loading screen progress animation
   startLoading();
