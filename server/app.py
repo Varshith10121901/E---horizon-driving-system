@@ -89,6 +89,7 @@ def main():
     print("[SERVER] Press Ctrl+C to stop.")
     print()
 
+    app = create_app()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
 
