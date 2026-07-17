@@ -248,7 +248,7 @@ class EmailService:
             <div style="background-color: #fafafa; border: 1px solid #eaeaea; border-radius: 4px; padding: 20px; margin: 30px 0;">
                 <h3 style="margin-top: 0; color: #b8860b; font-size: 15px; font-family: Arial, sans-serif;">Getting Started</h3>
                 <ul style="margin-bottom: 0; padding-left: 20px; color: #555555; font-size: 13px; line-height: 1.6;">
-                    <li>Access your dashboard at <a href="http://localhost:5000" style="color: #1a73e8; text-decoration: none;">http://localhost:5000</a></li>
+                    <li>Access your dashboard</li>
                     <li>Review active weather and disaster alerts along your routes</li>
                     <li>Initiate smart telemetry and Dijkstra rerouting tests</li>
                 </ul>
