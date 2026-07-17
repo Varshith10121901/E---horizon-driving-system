@@ -38,7 +38,7 @@ def start_node_server():
         try:
             log_file_path = os.path.join(root_dir, "node_server.log")
             log_file = open(log_file_path, "w", encoding="utf-8")
-            subprocess.Popen(["npm", "start"], cwd=root_dir, stdout=log_file, stderr=subprocess.STDOUT, shell=True)
+            subprocess.Popen(["npm", "run", "start-node"], cwd=root_dir, stdout=log_file, stderr=subprocess.STDOUT, shell=True)
             print(f"[Flask] Node.js server process spawned. Logs at {log_file_path}")
         except Exception as e:
             print(f"[Flask] Failed to start Node.js server: {e}")

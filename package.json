@@ -5,7 +5,9 @@
   "description": "DriveSphere — Intelligent, hazard-aware, real-time dynamic route planning dashboard.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node start.js",
+    "start-node": "node server.js",
+    "start-python": "python server/app.py",
     "test": "node --check server.js && node --check frontend/app.js && node test_runner.js"
   },
   "engines": {
