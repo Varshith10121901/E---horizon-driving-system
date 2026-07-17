@@ -16,6 +16,7 @@ const nodeProcess = spawn('node', ['server.js'], {
 console.log('[Launcher] Starting Flask auth server (Port 5000)...');
 const pythonProcess = spawn('python', ['app.py'], {
   cwd: path.join(__dirname, 'server'),
+  env: { ...process.env, PORT: '5000' },
   stdio: ['inherit', 'pipe', 'pipe']
 });
 

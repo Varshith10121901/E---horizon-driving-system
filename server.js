@@ -467,7 +467,7 @@ const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.join(__dirname, "frontend");
 const NASA_API_KEY = process.env.NASA_API_KEY || "DEMO_KEY";
 const MAP_PROVIDER = "NASA";
-const AUTH_URL = process.env.AUTH_URL || "";
+const AUTH_URL = process.env.AUTH_URL || "/login";
 
 let demoStart = Date.now();
 let plan = {
@@ -2599,8 +2599,59 @@ async function getCachedNasaEvents(days) {
   }
 }
 
+function proxyToFlask(request, response, targetPort = 5000) {
+  const options = {
+    hostname: '127.0.0.1',
+    port: targetPort,
+    path: request.url,
+    method: request.method,
+    headers: request.headers
+  };
+
+  // Override the host header to point to target
+  if (options.headers.host) {
+    options.headers.host = `127.0.0.1:${targetPort}`;
+  }
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    response.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(response, { end: true });
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error(`[Proxy Error] Failed to connect to Flask auth server:`, err.message);
+    response.writeHead(502, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ error: "Authentication service is temporarily unavailable." }));
+  });
+
+  request.pipe(proxyReq, { end: true });
+}
+
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
+
+  // Serve the React authentication/login page at /login and /login/
+  if (url.pathname === "/login" || url.pathname === "/login/") {
+    const rootIndexFile = path.join(__dirname, "index.html");
+    sendStatic(response, rootIndexFile);
+    return;
+  }
+
+  // Intercept and proxy authentication API endpoints to the Flask server
+  const authRoutes = [
+    "/api/register",
+    "/api/login",
+    "/api/verify-otp",
+    "/api/resend-otp",
+    "/api/oauth/google",
+    "/api/forgot-password",
+    "/api/reset-password"
+  ];
+
+  if (authRoutes.some(route => url.pathname === route)) {
+    proxyToFlask(request, response);
+    return;
+  }
 
   if (url.pathname === "/favicon.ico") {
     response.writeHead(204);
