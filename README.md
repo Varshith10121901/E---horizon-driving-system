@@ -221,23 +221,23 @@ Starting test server on port 3001...
 
 Running: GET /api/map-config - Fetch map keys and styles
    Map provider found: NASA
-✅ Passed: GET /api/map-config - Fetch map keys and styles
+ Passed: GET /api/map-config - Fetch map keys and styles
 
 Running: GET /api/nasa-events - Fetch active disasters (Wildfires/Storms)
    NASA EONET: Loaded 47 active event pins.
-✅ Passed: GET /api/nasa-events - Fetch active disasters (Wildfires/Storms)
+ Passed: GET /api/nasa-events - Fetch active disasters (Wildfires/Storms)
 
 Running: GET /api/reverse-geocode - Resolve place name from coordinate
    Resolved location: Hubballi Urban Taluku, Hubballi
-✅ Passed: GET /api/reverse-geocode - Resolve place name from coordinate
+ Passed: GET /api/reverse-geocode - Resolve place name from coordinate
 
 Running: POST /api/plan & GET /api/trip-state - Set and fetch active navigation route
    Created Route: Generated 17 segment splits.
-✅ Passed: POST /api/plan & GET /api/trip-state - Set and fetch active navigation route
+ Passed: POST /api/plan & GET /api/trip-state - Set and fetch active navigation route
 
 Running: POST /api/plan (clear) - Clear active navigation plan
    Plan memory cleared successfully.
-✅ Passed: POST /api/plan (clear) - Clear active navigation plan
+ Passed: POST /api/plan (clear) - Clear active navigation plan
 
 ======================================
           TEST RESULTS REPORT         

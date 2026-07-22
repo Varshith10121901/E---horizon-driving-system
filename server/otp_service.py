@@ -1,10 +1,3 @@
-"""
-DriveSphere OTP Service
-Generates, hashes, and validates 6-digit OTP codes.
-Uses cryptographically secure random generation and SHA-256 hashing.
-Adapted from AUTH COPY/backend/otp_service.py.
-"""
-
 import hashlib
 import secrets
 from datetime import datetime, timezone

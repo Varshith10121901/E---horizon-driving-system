@@ -1,9 +1,3 @@
-"""
-DriveSphere MongoDB Models
-Handles all database operations: users, OTPs, rate events.
-Uses pymongo with MongoDB Atlas.
-"""
-
 from datetime import datetime, timedelta, timezone
 
 from pymongo import MongoClient, ASCENDING

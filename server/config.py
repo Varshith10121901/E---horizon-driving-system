@@ -1,8 +1,3 @@
-"""
-DriveSphere Backend Configuration
-MongoDB Atlas + Gmail SMTP + JWT + OTP settings.
-"""
-
 import os
 import secrets
 

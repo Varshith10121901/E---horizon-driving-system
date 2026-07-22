@@ -1,10 +1,3 @@
-"""
-DriveSphere Email Service
-Sends OTP verification and welcome emails via Gmail SMTP over TLS.
-Uses professional HTML templates with DriveSphere branding.
-Adapted from AUTH COPY/backend/email_service.py.
-"""
-
 import smtplib
 import ssl
 from email.mime.text import MIMEText

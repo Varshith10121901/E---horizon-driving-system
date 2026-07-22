@@ -1,17 +1,3 @@
-"""
-DriveSphere Backend — Flask Application Entry Point
-
-Serves the React frontend and provides all authentication API endpoints.
-Uses MongoDB Atlas for data storage and Gmail SMTP for OTP emails.
-
-Usage:
-    cd D:\\testttt\\server
-    pip install -r requirements.txt
-    python app.py
-
-Then open http://localhost:5000 in your browser.
-"""
-
 import os
 import sys
 

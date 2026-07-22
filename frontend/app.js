@@ -1,14 +1,3 @@
-/* ═══════════════════════════════════════════════════════════
-   E-HORIZON AI — SMART 3D NASA TRAVEL MAP APPLICATION
-   ===========================================================
-   • NASA GIBS & Esri Satellite HD Tiles
-   • AWS Terrarium DEM 3D Elevation Terrain
-   • Three.js Screen-Space Weather Particles (Rain / Mist)
-   • 3D Driving Camera Following Route (Google Maps style)
-   • Dijkstra Shortest Path Visualizer
-   • AI Threat Copilot & Hazard Modal Confirmation Flow
-   ═══════════════════════════════════════════════════════════ */
-
 // ─── State ───
 let map = null;
 let tripState = null;
@@ -785,13 +774,13 @@ function rebuildHazardZones() {
       const el = document.createElement("div");
       el.className = "custom-marker";
       el.style.cursor = "pointer";
-      el.innerHTML = `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#3b82f6" opacity="0.35"/><text x="16" y="21" text-anchor="middle" fill="#93c5fd" font-size="14">🌧</text></svg>`;
+      el.innerHTML = `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#3b82f6" opacity="0.35"/><text x="16" y="21" text-anchor="middle" fill="#93c5fd" font-size="14"></text></svg>`;
       
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat(midPoint)
         .setPopup(new maplibregl.Popup({ offset: 15, className: "cyber-popup" }).setHTML(
           `<div style="font-family:Inter,sans-serif;font-size:12px;color:#fff;">
-            <strong style="color:#3b82f6;">🌧 Rain Zone</strong>
+            <strong style="color:#3b82f6;"> Rain Zone</strong>
             <p style="margin:4px 0 0;color:#94a3b8;">Weather sensors report heavy rain at ${escapeHtml(seg.from)}</p>
           </div>`
         ))
@@ -837,13 +826,13 @@ function rebuildHazardZones() {
       const el = document.createElement("div");
       el.className = "custom-marker";
       el.style.cursor = "pointer";
-      el.innerHTML = `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="${color}" opacity="0.2"/><text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">⚠</text></svg>`;
+      el.innerHTML = `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="${color}" opacity="0.2"/><text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold"></text></svg>`;
       
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat(midPoint)
         .setPopup(new maplibregl.Popup({ offset: 15, className: "cyber-popup" }).setHTML(
           `<div style="font-family:Inter,sans-serif;font-size:12px;color:#fff;">
-            <strong style="color:${color};">⚠ Landslide Alert</strong>
+            <strong style="color:${color};"> Landslide Alert</strong>
             <p style="margin:4px 0 0;color:#94a3b8;">High terrain slope risk near ${escapeHtml(seg.from)}</p>
           </div>`
         ))
@@ -898,16 +887,16 @@ function rebuildHazardZones() {
         el.className = "custom-marker";
         el.style.cursor = "pointer";
         
-        const warningSymbol = place.hasActiveNews ? "🚨" : "⚠";
+        const warningSymbol = place.hasActiveNews ? "" : "";
         el.innerHTML = `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="${color}" opacity="0.25"/><text x="16" y="21" text-anchor="middle" fill="${color}" font-size="14" font-weight="bold">${warningSymbol}</text></svg>`;
         
         const popupText = place.hasActiveNews
           ? `<div style="font-family:Inter,sans-serif;font-size:12px;color:#fff;">
-               <strong style="color:#ef4444;">🚨 Active Threat Warning</strong>
+               <strong style="color:#ef4444;"> Active Threat Warning</strong>
                <p style="margin:4px 0 0;">Recent news alerts confirm active natural threats near <strong>${escapeHtml(place.name)}</strong>.</p>
              </div>`
           : `<div style="font-family:Inter,sans-serif;font-size:12px;color:#fff;">
-               <strong style="color:#f59e0b;">⚠ Hazard-Prone Zone (CSV)</strong>
+               <strong style="color:#f59e0b;"> Hazard-Prone Zone (CSV)</strong>
                <p style="margin:4px 0 0;"><strong>${escapeHtml(place.name)}</strong> is flagged in the historical database as a ${escapeHtml(place.disasterType || 'hazard')} zone.</p>
              </div>`;
 
@@ -939,7 +928,7 @@ function addRouteMarkers(state) {
     places.push({
       pos: [state.startPlace.lon, state.startPlace.lat],
       label: state.startPlace.name,
-      icon: "🛫",
+      icon: "",
       color: "#00f5d4"
     });
   } else {
@@ -948,7 +937,7 @@ function addRouteMarkers(state) {
       places.push({
         pos: startCoords,
         label: currentRouteSegments[0].from,
-        icon: "🛫",
+        icon: "",
         color: "#00f5d4"
       });
     }
@@ -962,7 +951,7 @@ function addRouteMarkers(state) {
         places.push({
           pos: startCoords,
           label: seg.from,
-          icon: "⛰️",
+          icon: "️",
           color: "#fbbf24"
         });
       }
@@ -974,7 +963,7 @@ function addRouteMarkers(state) {
     places.push({
       pos: [state.endPlace.lon, state.endPlace.lat],
       label: state.endPlace.name,
-      icon: "🏁",
+      icon: "",
       color: "#00f5d4"
     });
   } else {
@@ -984,7 +973,7 @@ function addRouteMarkers(state) {
       places.push({
         pos: endCoords,
         label: lastSeg.to,
-        icon: "🏁",
+        icon: "",
         color: "#00f5d4"
       });
     }
@@ -1000,7 +989,7 @@ function addRouteMarkers(state) {
           places.push({
             pos: [h.lon, h.lat],
             label: `${h.name} (${h.place})`,
-            icon: "🏨",
+            icon: "",
             color: "#a855f7", // Premium neon purple for hotels
             isHotel: true
           });
@@ -1020,7 +1009,7 @@ function addRouteMarkers(state) {
     el.style.color = "#ffffff";
     el.style.cursor = "pointer";
 
-    if (m.icon === "⛰️") {
+    if (m.icon === "️") {
       // Premium Location Pin SVG
       el.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
     } else if (m.isHotel) {
@@ -1035,7 +1024,7 @@ function addRouteMarkers(state) {
 
     const popupHtml = m.isHotel
       ? `<div style="font-family:Inter,sans-serif;font-size:12px;padding:2px;color:#fff;">
-           <strong style="color:var(--neon-purple);display:block;margin-bottom:2px;">🏨 Hotel stay suggestion</strong>
+           <strong style="color:var(--neon-purple);display:block;margin-bottom:2px;"> Hotel stay suggestion</strong>
            <strong>${escapeHtml(m.label)}</strong>
          </div>`
       : `<div style="font-family:Inter,sans-serif;font-size:12px;padding:2px;color:#fff;">
@@ -1062,7 +1051,7 @@ function addVehicleMarker() {
   el.style.justifyContent = "center";
   el.style.fontSize = "1.5rem";
   el.style.filter = "drop-shadow(0 2px 5px rgba(0,0,0,0.5))";
-  el.textContent = "🚗";
+  el.textContent = "";
 
   vehicleMarker = new maplibregl.Marker({ element: el, anchor: "center" })
     .setLngLat(currentRouteCoords[0] || [75.1, 13.8])
@@ -1083,7 +1072,7 @@ async function fetchNASAEvents() {
     addNASAMarkers();
   } catch (e) {
     console.warn("[NASA EONET]", e.message);
-    ui.nasaEventList.innerHTML = `<div class="event-placeholder">⚠ Could not connect to EONET proxy</div>`;
+    ui.nasaEventList.innerHTML = `<div class="event-placeholder"> Could not connect to EONET proxy</div>`;
   }
 }
 
@@ -1164,7 +1153,7 @@ function addNASAMarkers() {
       .setLngLat([event.lon, event.lat])
       .setPopup(new maplibregl.Popup({ offset: 12, maxWidth: "260px" }).setHTML(
         `<div style="font-family:Inter,sans-serif;font-size:12px;color:#fff;">
-          <strong style="color:${color};font-size:13px;">🌍 ${escapeHtml(event.title)}</strong>
+          <strong style="color:${color};font-size:13px;"> ${escapeHtml(event.title)}</strong>
           <p style="margin:4px 0 0;color:#94a3b8;">NASA EONET Category: ${escapeHtml(category)}</p>
           <p style="margin:2px 0 0;color:#cbd5e1;">Location: ${event.lat.toFixed(4)}, ${event.lon.toFixed(4)}</p>
         </div>`
@@ -1543,23 +1532,23 @@ function updateAIDetection(routeIdx) {
   // Dynamic alert banner & STAY BACK warnings
   if (tripState && tripState.risk.level === "Critical") {
     ui.alertBanner.classList.add("visible", "stay-back-alert");
-    ui.alertText.textContent = `🛑 STAY BACK ALERT: Critical hazard ahead on ${activeSegment.to}. Postpone travel!`;
+    ui.alertText.textContent = ` STAY BACK ALERT: Critical hazard ahead on ${activeSegment.to}. Postpone travel!`;
   } else if (tripState && tripState.roadIssuesDetected) {
     ui.alertBanner.classList.add("visible");
     ui.alertBanner.classList.remove("stay-back-alert");
     if (tripState.newsAlerts && tripState.newsAlerts.length > 0) {
-      ui.alertText.textContent = `🚨 Alert: ${tripState.newsAlerts[0].title}`;
+      ui.alertText.textContent = ` Alert: ${tripState.newsAlerts[0].title}`;
     } else {
-      ui.alertText.textContent = `⚠ Warning: Live weather updates reports critical hazards ahead!`;
+      ui.alertText.textContent = ` Warning: Live weather updates reports critical hazards ahead!`;
     }
   } else if (activeSegment.type === "rain") {
     ui.alertBanner.classList.add("visible");
     ui.alertBanner.classList.remove("stay-back-alert");
-    ui.alertText.textContent = `⚠ Severe precipitation: AI Speed adjusted dynamically by vegetation cover.`;
+    ui.alertText.textContent = ` Severe precipitation: AI Speed adjusted dynamically by vegetation cover.`;
   } else if (activeSegment.type === "forest") {
     ui.alertBanner.classList.add("visible");
     ui.alertBanner.classList.remove("stay-back-alert");
-    ui.alertText.textContent = `🌲 Thick Forest Section: Moderate NDVI. Animal crossing watch active.`;
+    ui.alertText.textContent = ` Thick Forest Section: Moderate NDVI. Animal crossing watch active.`;
   } else {
     ui.alertBanner.classList.remove("visible", "stay-back-alert");
   }
@@ -1668,7 +1657,7 @@ function render(state) {
               <span class="route-badge ${riskClass}">${riskLabel}</span>
             </div>
             <div class="route-card-stats">
-              <span>📏 ${alt.totalKm} km</span>
+              <span> ${alt.totalKm} km</span>
               <span>⏱️ ${Math.round(alt.totalKm / 60 * 60)} min</span>
             </div>
             <div class="route-card-places" title="${escapeHtml(alt.summary)}">
@@ -1683,14 +1672,14 @@ function render(state) {
   // Vehicle Emoji Indicator
   const vehicleMarkerEl = document.getElementById("vehicleMarkerEl");
   if (vehicleMarkerEl) {
-    let emoji = "🚗";
+    let emoji = "";
     const vType = (state.plan.vehicle || "").toLowerCase();
-    if (vType.includes("bus")) emoji = "🚌";
-    else if (vType.includes("bike")) emoji = "🏍️";
-    else if (vType.includes("van")) emoji = "🚐";
+    if (vType.includes("bus")) emoji = "";
+    else if (vType.includes("bike")) emoji = "️";
+    else if (vType.includes("van")) emoji = "";
     
-    if (state.risk.level === "Critical") emoji = "⚠️";
-    else if (state.risk.level === "High") emoji = "🚨";
+    if (state.risk.level === "Critical") emoji = "️";
+    else if (state.risk.level === "High") emoji = "";
     vehicleMarkerEl.textContent = emoji;
   }
 
@@ -1735,13 +1724,13 @@ function render(state) {
     const alerts = [];
     currentRouteSegments.forEach((seg) => {
       if (seg.type === "rain") {
-        alerts.push(`<span style="color:#60a5fa;">🌧️ <strong>Rain Zone:</strong> ${seg.from} to ${seg.to} (Heavy rainfall expected)</span>`);
+        alerts.push(`<span style="color:#60a5fa;">️ <strong>Rain Zone:</strong> ${seg.from} to ${seg.to} (Heavy rainfall expected)</span>`);
       }
       if (seg.ndvi >= 0.72 || seg.curvature === "Extreme Curves") {
-        alerts.push(`<span style="color:#ef4444;">⚠️ <strong>Landslide Risk:</strong> ${seg.from} to ${seg.to} (Steep hairpins & high terrain)</span>`);
+        alerts.push(`<span style="color:#ef4444;">️ <strong>Landslide Risk:</strong> ${seg.from} to ${seg.to} (Steep hairpins & high terrain)</span>`);
       }
     });
-    hazardsDiv.innerHTML = alerts.length > 0 ? alerts.join("") : `<span style="color:#10b981;">✓ No active landslide or severe rain alerts.</span>`;
+    hazardsDiv.innerHTML = alerts.length > 0 ? alerts.join("") : `<span style="color:#10b981;"> No active landslide or severe rain alerts.</span>`;
   }
 
   // Weather widgets
@@ -1780,11 +1769,11 @@ function render(state) {
       if (hasActiveNews) {
         dotColor = "var(--neon-red)";
         labelColor = "var(--neon-red)";
-        badgeHtml = `<span style="background: rgba(239, 68, 68, 0.2); color: var(--neon-red); border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 4px; border-radius: 4px; font-size: 0.65rem; margin-left: 6px; font-weight:700;">⚠️ ACTIVE ALERT</span>`;
+        badgeHtml = `<span style="background: rgba(239, 68, 68, 0.2); color: var(--neon-red); border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 4px; border-radius: 4px; font-size: 0.65rem; margin-left: 6px; font-weight:700;">️ ACTIVE ALERT</span>`;
       } else if (isDisasterZone) {
         dotColor = "#f59e0b";
         labelColor = "#f59e0b";
-        badgeHtml = `<span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 1px 4px; border-radius: 4px; font-size: 0.6rem; margin-left: 6px; font-weight:600;">⚠ ${escapeHtml(disasterType || 'HAZARD ZONE')}</span>`;
+        badgeHtml = `<span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 1px 4px; border-radius: 4px; font-size: 0.6rem; margin-left: 6px; font-weight:600;"> ${escapeHtml(disasterType || 'HAZARD ZONE')}</span>`;
       } else if (isStart || isEnd) {
         dotColor = "var(--neon-cyan)";
         labelColor = "#ffffff";
@@ -1823,9 +1812,9 @@ function render(state) {
         
         let placeHtml;
         if (hasActiveNews) {
-          placeHtml = `<strong style="color: var(--neon-red); text-shadow: 0 0 4px rgba(239,68,68,0.3);" title="Active Danger Alert">🚨 ${escapeHtml(placeName)}</strong>`;
+          placeHtml = `<strong style="color: var(--neon-red); text-shadow: 0 0 4px rgba(239,68,68,0.3);" title="Active Danger Alert"> ${escapeHtml(placeName)}</strong>`;
         } else if (isDisasterZone) {
-          placeHtml = `<strong style="color: #f59e0b; text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Disaster Zone">⚠ ${escapeHtml(placeName)}</strong>`;
+          placeHtml = `<strong style="color: #f59e0b; text-shadow: 0 0 4px rgba(245,158,11,0.3);" title="Disaster Zone"> ${escapeHtml(placeName)}</strong>`;
         } else if (isStart || isEnd) {
           placeHtml = `<span style="color: var(--neon-cyan); font-weight: 700;">${escapeHtml(placeName)}</span>`;
         } else {
@@ -1833,7 +1822,7 @@ function render(state) {
         }
           
         const arrowHtml = idx < viaPlaces.length - 1 
-          ? `<span style="color: var(--ink-muted); margin: 0 2px;">➔</span>`
+          ? `<span style="color: var(--ink-muted); margin: 0 2px;"></span>`
           : "";
           
         return `${placeHtml}${arrowHtml}`;
@@ -1890,10 +1879,10 @@ function renderHotels(hotels) {
         </div>
         <div class="hotel-links-container">
           <a href="${bookingUrl}" target="_blank" class="btn-booking-link booking-com" onclick="event.stopPropagation();">
-            ✈️ Booking.com
+            ️ Booking.com
           </a>
           <a href="${agodaUrl}" target="_blank" class="btn-booking-link agoda" onclick="event.stopPropagation();">
-            🏨 Agoda
+             Agoda
           </a>
         </div>
       </li>
@@ -2081,7 +2070,7 @@ function showHazardModal(segments) {
     const item = document.createElement("div");
     item.className = "hazard-detail-item";
     item.innerHTML = `
-      <strong>🔴 High Risk segment: ${seg.from} to ${seg.to}</strong>
+      <strong> High Risk segment: ${seg.from} to ${seg.to}</strong>
       <p>Slope terrain with vegetation index NDVI of ${seg.ndvi.toFixed(2)}. curvature: ${seg.curvature}. Speed limited to ${seg.speedLimit} km/h.</p>
     `;
     ui.hazardDetailsList.appendChild(item);
@@ -2099,7 +2088,7 @@ function showHazardModal(segments) {
     item.className = "hazard-detail-item";
     item.style.borderLeftColor = "#f59e0b";
     item.innerHTML = `
-      <strong>🌐 NASA EONET Active Event: ${escapeHtml(e.title)}</strong>
+      <strong> NASA EONET Active Event: ${escapeHtml(e.title)}</strong>
       <p>Nature alert detected at coordinates [${e.lat.toFixed(4)}, ${e.lon.toFixed(4)}]. Watch for landslide triggers.</p>
     `;
     ui.hazardDetailsList.appendChild(item);
@@ -2112,7 +2101,7 @@ function showHazardModal(segments) {
       item.className = "hazard-detail-item";
       item.style.borderLeftColor = "#ec4899";
       item.innerHTML = `
-        <strong>📰 Live news Report: ${escapeHtml(news.title)}</strong>
+        <strong> Live news Report: ${escapeHtml(news.title)}</strong>
         <p>${escapeHtml(news.description.slice(0, 120))}...</p>
       `;
       ui.hazardDetailsList.appendChild(item);
@@ -2208,7 +2197,7 @@ async function triggerReroute(lat, lng) {
     const toast = document.createElement("div");
     toast.className = "map-toast critical";
     toast.innerHTML = `
-      <span class="map-toast-icon">🔄</span>
+      <span class="map-toast-icon"></span>
       <div class="map-toast-content">
         <span class="map-toast-title">Reroute Recalculation</span>
         <span class="map-toast-desc">GPS deviation detected. Recalculating path with optimal road conditions...</span>
@@ -2295,10 +2284,10 @@ function triggerMapNotifications(alerts) {
     shownNotificationIds.add(alertId);
     
     const toast = document.createElement("div");
-    const isCritical = alert.title.includes("🚨") || alert.title.includes("⚠️") || alert.title.toLowerCase().includes("risk") || alert.title.toLowerCase().includes("alert");
+    const isCritical = alert.title.includes("") || alert.title.includes("️") || alert.title.toLowerCase().includes("risk") || alert.title.toLowerCase().includes("alert");
     toast.className = `map-toast ${isCritical ? "critical" : ""}`;
     
-    const icon = alert.title.includes("🚨") ? "🚨" : alert.title.includes("🌧️") ? "🌧️" : "⚠️";
+    const icon = alert.title.includes("") ? "" : alert.title.includes("️") ? "️" : "️";
     
     toast.innerHTML = `
       <span class="map-toast-icon">${icon}</span>

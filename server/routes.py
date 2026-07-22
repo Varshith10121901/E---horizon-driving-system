@@ -1,13 +1,3 @@
-"""
-DriveSphere API Routes
-All authentication endpoints matching the React frontend contract:
-  POST /api/register     — Create account + send OTP
-  POST /api/login        — Sign in with JWT
-  POST /api/verify-otp   — Verify 6-digit code
-  POST /api/resend-otp   — Resend verification code
-  POST /api/oauth/google — Mock Google OAuth
-"""
-
 from datetime import datetime, timedelta, timezone
 import os
 import socket

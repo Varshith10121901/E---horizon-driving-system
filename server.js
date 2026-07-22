@@ -2136,7 +2136,7 @@ async function buildTripStateAsync(searchParams) {
       
       if (isRecent && isNaturalDisaster) {
         const dbAlert = {
-          title: `🚨 HAZARD ZONE DETECTED: ${notif.place} (${notif.state})`,
+          title: ` HAZARD ZONE DETECTED: ${notif.place} (${notif.state})`,
           link: notif.source_url,
           pubDate: notif.published_at,
           description: `Headline: ${notif.headline}. Tagged disaster: ${notif.disaster_tags}. (Verified in database)`,
@@ -2164,7 +2164,7 @@ async function buildTripStateAsync(searchParams) {
   activeSegments.forEach((seg, idx) => {
     if (seg.roadType && seg.roadType.includes("Landslide")) {
       filteredGenuineNews.push({
-        title: `🚨 Historical Landslide Risk: ${seg.from} to ${seg.to}`,
+        title: ` Historical Landslide Risk: ${seg.from} to ${seg.to}`,
         link: "#",
         pubDate: new Date().toUTCString(),
         description: `This segment has high historical landslide incidents recorded. Watch for weather changes.`,
@@ -2185,7 +2185,7 @@ async function buildTripStateAsync(searchParams) {
     const dist = getDistanceKm(activeSegment.points[0][1], activeSegment.points[0][0], e.lat, e.lon);
     if (dist < 40) {
       filteredGenuineNews.push({
-        title: `⚠️ NASA EONET Incident: ${e.title}`,
+        title: `️ NASA EONET Incident: ${e.title}`,
         link: "#",
         pubDate: e.date || new Date().toUTCString(),
         description: `NASA satellite detected an active natural event (${e.categories?.[0]?.title || "hazard"}) within 40km of active route.`,
@@ -2203,7 +2203,7 @@ async function buildTripStateAsync(searchParams) {
   const currentPrecip = (weatherCurrent.current && weatherCurrent.current.precip_mm) || 0;
   if (currentPrecip > 5.0) {
     filteredGenuineNews.push({
-      title: `🌧️ Heavy Precipitation alert: ${weatherCurrent.location.name}`,
+      title: `️ Heavy Precipitation alert: ${weatherCurrent.location.name}`,
       link: "#",
       pubDate: new Date().toUTCString(),
       description: `Active rain gauge detects heavy rainfall of ${currentPrecip} mm. Drive under safe limits.`,
@@ -2239,10 +2239,10 @@ async function buildTripStateAsync(searchParams) {
   
   if (riskScore >= 70) {
     riskLevel = "Critical";
-    drivingAdvice = "⚠️ STAY BACK ALERT! Extreme hazard ahead. slippery road, protest risk or natural disaster active. Postpone driving until conditions clear.";
+    drivingAdvice = "️ STAY BACK ALERT! Extreme hazard ahead. slippery road, protest risk or natural disaster active. Postpone driving until conditions clear.";
   } else if (riskScore >= 45) {
     riskLevel = "High";
-    drivingAdvice = "⚠️ High risk ahead. Road curvature is steep and surface is wet. Limit speed to 40 km/h and increase following distance.";
+    drivingAdvice = "️ High risk ahead. Road curvature is steep and surface is wet. Limit speed to 40 km/h and increase following distance.";
   } else if (riskScore >= 25) {
     riskLevel = "Medium";
     drivingAdvice = "Moderate risk. Winding path or light precipitation. Drive carefully at around 55 km/h.";
